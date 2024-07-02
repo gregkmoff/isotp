@@ -13,6 +13,7 @@
 #define CANFD_MAX_DLC (15)
 
 enum can_frame_format_e {
+    NULL_CAN_FRAME_FORMAT,
     CLASSIC_CAN_FRAME_FORMAT,
     CAN_FD_FRAME_FORMAT,
 };
@@ -22,12 +23,23 @@ struct can_frame_s {
     uint8_t data[CANFD_MAX_DATALEN];
     uint8_t datalen;
     uint8_t dlc;
+    uint8_t capacity;
     can_frame_format_t format;
 };
 typedef struct can_frame_s can_frame_t;
 
 uint8_t can_max_datalen(const can_frame_format_t format);
 uint8_t can_max_dlc(const can_frame_format_t format);
+
+/**
+ * @brief initialize a CAN frame
+ *
+ * Initialize a CAN frame object for use
+ *
+ * @param frame - pointer to a can_frame_t object for initialization
+ * @param format - what format the CAN frame should be
+ */
+bool init_can_frame(can_frame_t* frame, const can_frame_format_t format);
 
 /**
  * @brief zero out all the contents of a can_frame_t

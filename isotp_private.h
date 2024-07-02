@@ -54,6 +54,11 @@ struct isotp_ctx_s {
     uint64_t fs_stmin;     // CF gap, STmin in usec
 
     uint64_t timestamp_us;
+
+    // transport related items
+    void* tpt_ctx;
+    isotp_rx_f tpt_receive_f;
+    isotp_tx_f tpt_send_f;
 };
 typedef struct isotp_ctx_s isotp_ctx_t;
 

@@ -88,6 +88,37 @@ enum isotp_addressing_mode_e {
 };
 typedef enum isotp_addressing_mode_e isotp_addressing_mode_t;
 
+/**
+ * @brief type definition of a function used to receive an ISOTP frame of data
+ *
+ * @parameters
+ *     ctx - pointer to the transport context (opaque to ISOTP)
+ *     rx_buf_p - pointer to the buffer where the frame is received into
+ *     rx_buf_sz - size of the buffer
+ *
+ * @returns
+ *     <0 - an error occured
+ *     >=0 - number of bytes returned into the receive buffer
+ */
+typedef int (*isotp_rx_f)(void* ctx, uint8_t* rx_buf_p, const uint32_t rx_buf_sz);
+
+/**
+ * @brief type definition of a function used to transmit an ISOTP frame of data
+ *
+ * This call blocks until the total frame has been transmitted, or
+ * an error occurs.
+ *
+ * @parameters
+ *     ctx - pointer to the transport context (opaque to ISOTP)
+ *     tx_buf_p - pointer to the buffer containing the frame to be transmitted
+ *     tx_len - length of the frame to be transmitted
+ *
+ * @returns
+ *     <0 - an error occurred
+ *     >=0 - number of bytes transmitted from the transmit buffer
+ */
+typedef int (*isotp_tx_f)(void* ctx, const uint8_t* tx_buf_p, const uint32_t tx_len);
+
 #if 0
 /**
  * @brief ISOTP context type
@@ -116,20 +147,15 @@ typedef struct isotp_ctx_s isotp_ctx_t;
  * A pre-allocated ISOTP context needs to be initialized once before it is used.
  *
  * @param ctx - pointer to a pre-allocated isotp_ctx_t
- * @param rx_frame - pointer to a pre-allocated can_frame_t where CAN frames
- *                   that are received by the underlying transport
- *                   are copied into and processed by the ISOTP stack
- * @param tx_frame - pointer to a pre-allocated can_frame_t where CAN frames
- *                   that are to be transmitted are writted into
- *                   by the ISOTP stack for subsequent transmission
  * @param can_frame_format - format of the CAN frames
  * @param addressing_mode - what ISOTP addressing mode is used (see above)
  * @returns return code indicating whether the context was
  *          initialized
  */
-isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx, can_frame_t* rx_frame, can_frame_t* tx_frame,
+isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx,
                           const can_frame_format_t can_frame_format,
-                          const isotp_addressing_mode_t addressing_mode);
+                          const isotp_addressing_mode_t addressing_mode,
+                          isotp_tx_f transport_send_f, isotp_rx_f transport_receive_f, void* transport_ctx);
 
 /**
  * @brief reset an ISOTP context
@@ -166,3 +192,18 @@ isotp_rc_t isotp_receive(isotp_ctx_t* ctx,
                          uint8_t* recv_buf_p,
                          const uint32_t recv_buf_sz,
                          uint32_t* recv_len);
+
+/**
+ * @brief transmit data via ISOTP from the send buffer
+ *
+ * The caller invokes this function to initiate an ISOTP transmit.
+ * The call is blocking until the data is transmitted, or an error occurs.
+ *
+ * @returns
+ *    ISOTP_RC_DONE - the transmit is done
+ *    ISOTP_RC_ERROR - an error occurred
+ *    ISOTP_RC_TIMEOUT - a timeout occurred during the transmit sequence
+ */
+isotp_rc_t isotp_send(isotp_ctx_t* ctx,
+                      const uint8_t* send_buf_p,
+                      const uint32_t send_len);

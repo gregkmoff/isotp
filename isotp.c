@@ -237,3 +237,15 @@ isotp_rc_t isotp_send(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32_
     break;
     }
 }
+
+
+
+
+
+isotp_rc_t isotp_send(isotp_ctx_t* ctx,
+                      const uint8_t* send_buf_p,
+                      const uint32_t send_len) {
+    if ((send_len) < max_sf_len(ctx->addressing_mode)) {
+    } else {
+    }
+}

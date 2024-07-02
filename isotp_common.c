@@ -1,10 +1,13 @@
 #include "isotp.h"
 #include "isotp_private.h"
 
-isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx, can_frame_t* rx_frame, can_frame_t* tx_frame, const isotp_addressing_mode_t addressing_mode) {
+isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx,
+                          const can_frame_format_t can_frame_format,
+                          const isotp_addressing_mode_t addressing_mode,
+                          isotp_tx_f transport_send_f, isotp_rx_f transport_receive_f, void* transport_ctx) {
     assert(ctx != NULL);
-    assert(rx_frame != NULL);
-    assert(tx_frame != NULL);
+    assert(transport_receive_f != NULL);
+    assert(transport_send_f != NULL);
 
     // currently we only support normal addressing mode
     // the parameter is here as a placeholder for future work
@@ -15,8 +18,10 @@ isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx, can_frame_t* rx_frame, can_frame_t* 
     }
 
     memset(ctx, 0, sizeof(*ctx));
-    ctx->rx_frame = rx_frame;
-    ctx->tx_frame = tx_frame;
+
+    ctx->tpt_ctx = transport_ctx;
+    ctx->tpt_receive_f = transport_receive_f;
+    ctx->tpt_send_f = transport_send_f;
 
     ctx->state = ISOTP_STATE_IDLE;
 

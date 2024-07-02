@@ -25,6 +25,7 @@ static inline bool valid_can_frame_format(const can_frame_format_t f) {
         return true;
         break;
 
+    case NULL_CAN_FRAME_FORMAT:
     default:
         return false;
         break;
@@ -36,9 +37,15 @@ uint8_t can_max_datalen(const can_frame_format_t format) {
     case CLASSIC_CAN_FRAME_FORMAT:
         return CAN_MAX_DATALEN;
         break;
+
     case CAN_FD_FRAME_FORMAT:
         return CANFD_MAX_DATALEN;
         break;
+
+    case NULL_CAN_FRAME_FORMAT:
+        return 0;
+        break;
+
     default:
         assert(0);
         return UINT8_MAX;
@@ -51,9 +58,15 @@ uint8_t can_max_dlc(const can_frame_format_t format) {
     case CLASSIC_CAN_FRAME_FORMAT:
         return CAN_MAX_DLC;
         break;
+
     case CAN_FD_FRAME_FORMAT:
         return CANFD_MAX_DLC;
         break;
+
+    case NULL_CAN_FRAME_FORMAT:
+        return 0;
+        break;
+
     default:
         assert(0);
         return UINT8_MAX;
@@ -64,14 +77,12 @@ uint8_t can_max_dlc(const can_frame_format_t format) {
 void zero_can_frame(can_frame_t* frame) {
     assert(frame != NULL);
 
-    can_frame_format_t fmt = frame->format;
-    if (!valid_can_frame_format(fmt)) {
-        assert(valid_can_frame_format(fmt));
+    if (!valid_can_frame_format(frame->format)) {
         return;
     }
 
-    memset(frame, 0, sizeof(*frame));
-    frame->format = fmt;
+    memset(frame->data, 0, frame->capacity);
+    frame->dlc = 0;
 }
 
 void pad_can_frame(can_frame_t* frame) {
@@ -140,4 +151,34 @@ bool can_data_len_to_dlc(const uint8_t data_len, uint8_t* dlc)
     }
 
     return false;
+}
+
+bool init_can_frame(can_frame_t* frame, const can_frame_format_t format) {
+    assert(frame != NULL);
+
+    if (valid_can_format(frame->format)) {
+        // already initialized
+        return false;
+    }
+
+    switch (format) {
+    case CLASSIC_CAN_FRAME_FORMAT:
+    case CAN_FD_FRAME_FORMAT:
+        frame->format = format;
+        frame->capacity = can_max_datalen(format);
+        break;
+
+    case NULL_CAN_FRAME_FORMAT:
+        return false;
+        break;
+
+    default:
+        assert(0);
+        return false;
+        break;
+    }
+
+    zero_can_frame(frame);
+
+    return true;
 }
