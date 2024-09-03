@@ -149,13 +149,16 @@ typedef struct isotp_ctx_s isotp_ctx_t;
  * @param ctx - pointer to a pre-allocated isotp_ctx_t
  * @param can_frame_format - format of the CAN frames
  * @param addressing_mode - what ISOTP addressing mode is used (see above)
+ * @param transport_send_f - function to be invoked when ISOTP sends a frame
+ * @param transport_recv_f - function to be invoked when ISOTP receives a frame
  * @returns return code indicating whether the context was
  *          initialized
  */
 isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx,
                           const can_frame_format_t can_frame_format,
                           const isotp_addressing_mode_t addressing_mode,
-                          isotp_tx_f transport_send_f, isotp_rx_f transport_receive_f, void* transport_ctx);
+                          isotp_tx_f transport_send_f,
+                          isotp_rx_f transport_receive_f);
 
 /**
  * @brief reset an ISOTP context
@@ -191,7 +194,8 @@ isotp_rc_t isotp_ctx_reset(isotp_ctx_t* ctx);
 isotp_rc_t isotp_receive(isotp_ctx_t* ctx,
                          uint8_t* recv_buf_p,
                          const uint32_t recv_buf_sz,
-                         uint32_t* recv_len);
+                         uint32_t* recv_len,
+                         void* transport_ctx);
 
 /**
  * @brief transmit data via ISOTP from the send buffer
@@ -199,11 +203,16 @@ isotp_rc_t isotp_receive(isotp_ctx_t* ctx,
  * The caller invokes this function to initiate an ISOTP transmit.
  * The call is blocking until the data is transmitted, or an error occurs.
  *
+ * @param ctx - ISOTP context to use
+ * @param transmit_buf_p - pointer to data to send
+ * @param transmit_len - amount of data to send via ISOTP
+ * @param tpt_ctx - context to use for the underlying transport
+ *
  * @returns
- *    ISOTP_RC_DONE - the transmit is done
- *    ISOTP_RC_ERROR - an error occurred
- *    ISOTP_RC_TIMEOUT - a timeout occurred during the transmit sequence
+ * <0 - an error occurred; the transmission did not complete
+ * >=0 - number of bytes transmitted successfully
  */
-isotp_rc_t isotp_send(isotp_ctx_t* ctx,
-                      const uint8_t* send_buf_p,
-                      const uint32_t send_len);
+int isotp_transmit(isotp_ctx_t* ctx,
+                   const uint8_t* transmit_buf_p,
+                   const uint32_t transmit_len,
+                   void* transport_ctx);
