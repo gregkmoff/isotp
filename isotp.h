@@ -8,6 +8,14 @@
  * Implementation of the ISOTP protocol used for Unified Diagnostic Services.
  */
 
+enum isotp_frame_e {
+    ISOTP_SF_FRAME,
+    ISOTP_FF_FRAME,
+    ISOTP_FC_FRAME,
+    ISOTP_CF_FRAME,
+};
+typedef enum isotp_frame_e isotp_frame_t;
+
 /**
  * @brief ISOTP return code values
  */

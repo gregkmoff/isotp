@@ -267,3 +267,81 @@ isotp_rc_t transmit_sf(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32
 
     return ISOTP_RC_TRANSMIT;
 }
+
+int write_sf(isotp_ctx_t* ctx,
+             uint8_t* dest_buf,
+             const uint32_t dest_buf_len,
+             const uint8_t* payload,
+             const uint32_t payload_len) {
+    if ((ctx == NULL) ||
+        (dest_buf == NULL) ||
+        (payload == NULL)) {
+        return -EINVAL;
+    }
+
+    // make sure the destination buffer is big enough to hold
+    // a full CAN frame
+    if ((dest_buf_len) < can_max_datalen(ctx->can_format)) {
+        return -ERANGE;
+    }
+
+    uint8_t* dp = NULL;
+
+    memset(dest_buf, 0, dest_buf_len);
+
+    int rc = 0;
+
+    // ensure the send_buf_len is valid for an SF
+    switch (ctx->addressing_mode) {
+    case ISOTP_NORMAL_ADDRESSING_MODE:
+    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
+        if (payload_len <= 7) {
+            // send as an SF with no escape sequence
+            dest_buf[0] = SF_PCI | (uint8_t)(payload_len & 0x00000007U);
+            dp = &(dest_buf[1]);
+            rc = payload_len + 1;  // SF header byte, payload
+        } else if (payload_len <= (can_max_datalen(ctx->can_format) - 2)) {
+            dest_buf[0] = SF_PCI;
+            dest_buf[1] = (uint8_t)(payload_len & 0x000000ffU);
+            dp = &(dest_buf[2]);
+            rc = payload_len + 2; // SF header byte, length, payload
+        } else {
+            return -ENOBUFS;
+        }
+        break;
+
+    case ISOTP_EXTENDED_ADDRESSING_MODE:
+    case ISOTP_MIXED_ADDRESSING_MODE:
+        if (payload_len <= 6) {
+            // send as an SF with no escape sequence
+            dest_buf[1] = SF_PCI | (uint8_t)(payload_len & 0x00000007U);
+            dp = &(dest_buf[2]);
+            rc = payload_len + 2; // addr extension, SF header, payload
+        } else if (payload_len <= (can_max_datalen(ctx->can_format) - 3)) {
+            // send as an SF with escape sequence
+            dest_buf[1] = SF_PCI;
+            dest_buf[2] = (uint8_t)(payload_len & 0x000000ffU);
+            dp = &(dest_buf[3]);
+            rc = payload_len + 3; // addr extension, SF header, length, payload
+        } else {
+            return -ENOBUFS;
+        }
+
+        dest_buf[0] = ctx->address_extension;
+        break;
+
+    default:
+        assert(0);
+        return -EINVAL;
+        break;
+    }
+
+    assert(dp != NULL);
+    memcpy(dp, payload, payload_len);
+    pad_can_frame(ctx->tx_frame);
+
+    ctx->total_datalen = 0;
+    ctx->remaining_datalen = 0;
+
+    return rc;
+}

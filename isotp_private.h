@@ -35,6 +35,7 @@ typedef enum isotp_state_e isotp_state_t;
  * by any ISOTP functions.
  */
 struct isotp_ctx_s {
+#ifdef OLD
     can_frame_t* rx_frame;
     can_frame_t* tx_frame;
     can_frame_format_t can_format;
@@ -59,6 +60,19 @@ struct isotp_ctx_s {
     void* tpt_ctx;
     isotp_rx_f tpt_receive_f;
     isotp_tx_f tpt_send_f;
+#else
+    can_frame_format_t can_format;
+    isotp_addressing_mode_t addressing_mode;
+    uint8_t address_extension;
+
+    uint32_t total_datalen;  // total length of the payload to be processed
+    uint32_t remaining_datalen;  // how much of the payload has yet to be processed
+
+    uint8_t fs_blocksize;  // blocksize from the last FC
+    uint64_t fs_stmin;     // CF gap, STmin in usec
+
+    uint64_t timestamp_us;
+#endif
 };
 typedef struct isotp_ctx_s isotp_ctx_t;
 
@@ -96,17 +110,23 @@ isotp_rc_t receive_sf(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv
 /**
  * @brief prepare an ISOTP SF CAN frame from the provided buffer
  *
- * Process the provided buffer into an ISOTP SF and copy to the
- * tx_frame in the ISOTP context.
+ * Process the provided payload into an ISOTP SF and copy to the
+ * destination buffer.
  *
  * @param ctx - ISOTP context
- * @param send_buf_p - pre-allocated buffer to copy payload from into the SF
- * @param recv_buf_sz - size of the payload in the buffer
+ * @param dest_buf - destination buffer to create the SF in
+ * @param dest_buf_sz - size of the destination buffer
+ * @param payload - payload data to copy into the SF
+ * @param payload_len - length of the payload data
  * @returns
- *     on success, ISOTP_RC_TRANSMIT.  The tx_frame in the ISOTP context is ready to be sent.
- *     on failure, error code
+ *     >0 success, length of the destination buffer.
+ *     <0 failure, error code
  */
-isotp_rc_t transmit_sf(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32_t send_buf_len);
+int write_sf(isotp_ctx_t* ctx,
+             uint8_t* dest_buf,
+             const uint32_t dest_buf_len,
+             const uint8_t* payload,
+             const uint32_t payload_len);
 
 /**
  * @brief process an incoming CAN frame as an ISOTP FF
