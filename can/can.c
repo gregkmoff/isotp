@@ -1,10 +1,24 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include "can.h"
+
+#ifndef EOK
+#define EOK (0)
+#endif // EOK
+
+#define CAN_MAX_DATALEN (8)
+#define CANFD_MAX_DATALEN (64)
+
+#define CAN_PADDING (0xcc)
+
+#define CAN_MAX_DLC (8)
+#define CANFD_MAX_DLC (15)
 
 #ifdef UNIT_TESTING
 extern void mock_assert(const int result, const char* const expression,
@@ -13,172 +27,108 @@ extern void mock_assert(const int result, const char* const expression,
 #undef assert
 #define assert(expression) \
     mock_assert((int)(expression), #expression, __FILE__, __LINE__);
-#endif
+#endif // UNIT_TESTING
 
-static const uint8_t dlc_to_datalen[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
-_Static_assert(sizeof(dlc_to_datalen) == (CANFD_MAX_DLC + 1), "DLC to DATALEN size mismatch");
+#ifndef MAX
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#endif // MAX
+
+#ifndef NUM_ENTRIES
+#define NUM_ENTRIES(x) (sizeof(x) / sizeof((x)[0]))
+#endif // NUM_ENTRIES
+
+static const int dlc_to_datalen[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+_Static_assert(NUM_ENTRIES(dlc_to_datalen) == (CANFD_MAX_DLC + 1),
+               "DLC to DATALEN size mismatch");
+
+static const bool _format_to_valid[NUM_CAN_FRAME_FORMATS] =
+    { false, true, true, false };
+_Static_assert(NUM_ENTRIES(_format_to_valid) == (NUM_CAN_FRAME_FORMATS),
+               "VALID CAN FRAME FORMATS VALID size mismatch");
 
 static inline bool valid_can_frame_format(const can_frame_format_t f) {
-    switch (f) {
-    case CLASSIC_CAN_FRAME_FORMAT:
-    case CAN_FD_FRAME_FORMAT:
-        return true;
-        break;
-
-    case NULL_CAN_FRAME_FORMAT:
-    default:
-        return false;
-        break;
-    }
+    return _format_to_valid[f];
 }
 
-uint8_t can_max_datalen(const can_frame_format_t format) {
-    switch (format) {
-    case CLASSIC_CAN_FRAME_FORMAT:
-        return CAN_MAX_DATALEN;
-        break;
+static const int _format_to_max_datalen[NUM_CAN_FRAME_FORMATS] =
+    { -EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ERANGE };
+_Static_assert(NUM_ENTRIES(_format_to_max_datalen) == (NUM_CAN_FRAME_FORMATS),
+               "MAX DATALEN FORMATS size mismatch");
 
-    case CAN_FD_FRAME_FORMAT:
-        return CANFD_MAX_DATALEN;
-        break;
-
-    case NULL_CAN_FRAME_FORMAT:
-        return 0;
-        break;
-
-    default:
-        assert(0);
-        return UINT8_MAX;
-        break;
-    }
+int can_max_datalen(const can_frame_format_t format) {
+    return _format_to_max_datalen[format];
 }
 
-uint8_t can_max_dlc(const can_frame_format_t format) {
-    switch (format) {
-    case CLASSIC_CAN_FRAME_FORMAT:
-        return CAN_MAX_DLC;
-        break;
+static const int _format_to_max_dlc[NUM_CAN_FRAME_FORMATS] =
+    { -EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ERANGE };
 
-    case CAN_FD_FRAME_FORMAT:
-        return CANFD_MAX_DLC;
-        break;
-
-    case NULL_CAN_FRAME_FORMAT:
-        return 0;
-        break;
-
-    default:
-        assert(0);
-        return UINT8_MAX;
-        break;
-    }
+int can_max_dlc(const can_frame_format_t format) {
+    return _format_to_max_dlc[format];
 }
 
-void zero_can_frame(can_frame_t* frame) {
-    assert(frame != NULL);
-
-    if (!valid_can_frame_format(frame->format)) {
-        return;
+int zero_can_frame(uint8_t* buf, const can_frame_format_t format) {
+    if ((buf == NULL) || !valid_can_frame_format(format)) {
+        return -EINVAL;
     }
 
-    memset(frame->data, 0, frame->capacity);
-    frame->dlc = 0;
+    (void)memset(buf, 0, can_max_datalen(format));
+
+    return EOK;
 }
 
-void pad_can_frame(can_frame_t* frame) {
-    assert(frame != NULL);
-    assert(frame->datalen > 0);
-    assert(frame->datalen <= CANFD_MAX_DATALEN);
-
-    can_frame_format_t fmt = frame->format;
-    if (!valid_can_frame_format(fmt)) {
-        assert(valid_can_frame_format(fmt));
-        return;
+int pad_can_frame(uint8_t* buf, const int buf_len,
+                  const can_frame_format_t format) {
+    if ((buf == NULL) ||
+        !valid_can_frame_format(format) ||
+        (buf_len < 0) ||
+        (buf_len > can_max_datalen(format))) {
+        return -EINVAL;
     }
 
-    bool rc = false;
-    uint8_t expected_len = 0;
-
-    // make sure the DLC is set
-    // if not, set it based on the datalen
-    if (frame->dlc == 0) {
-        rc = can_data_len_to_dlc(frame->datalen, &(frame->dlc));
-        assert(rc);
+    // get the DLC for the length of the data
+    int dlc = can_datalen_to_dlc(buf_len);
+    if (dlc < 0) {
+        return dlc;
     }
 
-    // get the expected length based on the DLC
-    rc = can_dlc_to_data_len(frame->dlc, &expected_len);
-    assert(rc);
-    assert(expected_len > 0);
-
-    // we need to pad to a minimum of 8 bytes
-    if (expected_len < CAN_MAX_DATALEN) {
-        expected_len = CAN_MAX_DATALEN;
+    // get the corresponding datalen based on the DLC
+    // (we need to pad to a minimum of 8 bytes (CAN CLASSIC))
+    int expected_len = can_dlc_to_datalen(dlc);
+    if (expected_len < 0) {
+        return expected_len;
     }
+    expected_len = MAX(expected_len, CAN_MAX_DATALEN);
 
     // pad if the expected length (based on the DLC) is longer
-    // than the datalen in the frame
-    if (expected_len > frame->datalen) {
-        (void)memset(&(frame->data[frame->datalen]), CAN_PADDING, expected_len - (size_t)frame->datalen);
-        frame->datalen = expected_len;
+    // than the length of the data
+    if (expected_len > buf_len) {
+        (void)memset(&(buf[buf_len]), CAN_PADDING,
+                     expected_len - buf_len);
     }
 
-    // make sure the DLC is set
-    rc = can_data_len_to_dlc(frame->datalen, &(frame->dlc));
-    assert(rc);
+    return dlc;
 }
 
-bool can_dlc_to_data_len(const uint8_t dlc, uint8_t* data_len)
-{
-    assert(dlc <= CANFD_MAX_DLC);
-    assert(data_len != NULL);
+int can_dlc_to_datalen(const int dlc) {
+    if ((dlc < 0) || (dlc > CANFD_MAX_DLC)) {
+        return -EINVAL;
+    }
 
-    *data_len = dlc_to_datalen[dlc];
-
-    return true;
+    return dlc_to_datalen[dlc];
 }
 
-bool can_data_len_to_dlc(const uint8_t data_len, uint8_t* dlc)
-{
-    assert(data_len <= CANFD_MAX_DATALEN);
-    assert(dlc != NULL);
+int can_datalen_to_dlc(const int datalen) {
+    if ((datalen == 0) || 
+        (datalen < 0) ||
+        (datalen > CANFD_MAX_DATALEN)) {
+        return -EINVAL;
+    }
 
     for (uint8_t i = 0; i <= CANFD_MAX_DLC; i++) {
-        if (data_len <= dlc_to_datalen[i]) {
-            *dlc = i;
-            return true;
+        if (datalen <= dlc_to_datalen[i]) {
+            return dlc_to_datalen[i];
         }
     }
 
-    return false;
-}
-
-bool init_can_frame(can_frame_t* frame, const can_frame_format_t format) {
-    assert(frame != NULL);
-
-    if (valid_can_format(frame->format)) {
-        // already initialized
-        return false;
-    }
-
-    switch (format) {
-    case CLASSIC_CAN_FRAME_FORMAT:
-    case CAN_FD_FRAME_FORMAT:
-        frame->format = format;
-        frame->capacity = can_max_datalen(format);
-        break;
-
-    case NULL_CAN_FRAME_FORMAT:
-        return false;
-        break;
-
-    default:
-        assert(0);
-        return false;
-        break;
-    }
-
-    zero_can_frame(frame);
-
-    return true;
+    return -ERANGE;
 }
