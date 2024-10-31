@@ -5,14 +5,14 @@
 /**
  * @brief define possible CAN frame formats
  */
-#define NUM_CAN_FRAME_FORMATS (4)
-enum can_frame_format_e {
-    NULL_CAN_FRAME_FORMAT,
-    CLASSIC_CAN_FRAME_FORMAT,
-    CAN_FD_FRAME_FORMAT,
-    LAST_CAN_FRAME_FORMAT
+#define NUM_CAN_FORMATS (4)
+enum can_format_e {
+    NULL_CAN_FORMAT,
+    CAN_FORMAT,
+    CANFD_FORMAT,
+    LAST_CAN_FORMAT
 };
-typedef enum can_frame_format_e can_frame_format_t;
+typedef enum can_format_e can_format_t;
 
 /**
  * @brief return the maximum supported data length for a CAN frame format
@@ -22,7 +22,7 @@ typedef enum can_frame_format_e can_frame_format_t;
  * on success, >0 : the data length 
  * otherwise, <=0 : error code
  */
-int can_max_datalen(const can_frame_format_t format);
+int can_max_datalen(const can_format_t format);
 
 /**
  * @brief return the maximum valid Data Length Code for a CAN frame format
@@ -32,7 +32,7 @@ int can_max_datalen(const can_frame_format_t format);
  * on success, >0 : the data length code
  * otherwise, <=0 : error code
  */
-int can_max_dlc(const can_frame_format_t format);
+int can_max_dlc(const can_format_t format);
 
 /**
  * @brief initialize a CAN frame
@@ -45,7 +45,7 @@ int can_max_dlc(const can_frame_format_t format);
  *   EOK - CAN frame was initialized
  *   other - error code, CAN frame is invalid
  */
-int zero_can_frame(uint8_t* buf, const can_frame_format_t format);
+int zero_can_frame(uint8_t* buf, const can_format_t format);
 
 /**
  * @brief pad a CAN frame with a padding pattern
@@ -64,29 +64,30 @@ int zero_can_frame(uint8_t* buf, const can_frame_format_t format);
  *     >=0 - DLC value of the successfully padded frame
  *     <0 - failed to pad, error code
  */
-int pad_can_frame(uint8_t* buf, const int buf_len, const can_frame_format_t format);
+int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format);
 
 /**
  * @brief convert from the DLC to the actual CAN data length
  *
  * @ref ISO-11898-1, section 8.4.2.4, table 5
  * @param dlc - Data Length Code (DLC) to convert
+ * @param format - CAN frame format
  * @returns
- * -EINVAL   - conversion failed (invalid DLC)
+ * -EINVAL   - invalid DLC or CAN frame format
  * othersise - conversion succeeded;
- *             the value of the datalen for the DLC is returned
+ *             the value of the datalen (>=0) for the DLC is returned
  */
-int can_dlc_to_datalen(const int dlc);
+int can_dlc_to_datalen(const int dlc, const can_format_t format);
 
 /**
  * @brief calculate the DLC for a given CAN data length
  *
  * @ref ISO-11898-1, section 8.4.2.4, table 5
  * @param datalen - length of the CAN frame, in bytes
+ * @param format - CAN frame format
  * @returns
- * -EINVAL   - invalid data length
- * -ERANGE   - unable to find a DLC for the specified data length
+ * -EINVAL   - invalid data length or CAN frame format
  * otherwise - conversion succeeded
- *             the value of the DLC for the data length is returned
+ *             the value of the DLC (>=0) for the data length is returned
  */
-int can_datalen_to_dlc(const int datalen);
+int can_datalen_to_dlc(const int datalen, const can_format_t format);
