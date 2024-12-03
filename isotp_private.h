@@ -1,9 +1,34 @@
+/**
+ * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "can.h"
+#include <can/can.h>
 #include "isotp.h"
 
 /**
@@ -12,21 +37,20 @@
  * Implementation of the ISOTP protocol used for Unified Diagnostic Services.
  */
 
+#ifndef EOK
+#define EOK (0)
+#endif // EOK
+
 #define PCI_MASK (0xf0)
 #define SF_PCI   (0x00)
 #define FF_PCI   (0x10)
 #define CF_PCI   (0x20)
 #define FC_PCI   (0x30)
 
-enum isotp_state_e {
-    ISOTP_STATE_UNINITIALIZED,
-    ISOTP_STATE_IDLE,
-    ISOTP_STATE_DONE,
-    ISOTP_STATE_ABORTED,
-    ISOTP_STATE_RECEIVING,
-    ISOTP_STATE_TRANSMITTING,
-};
-typedef enum isotp_state_e isotp_state_t;
+/**
+ * @ref ISO-15765-2:2016, section 9.1
+ */
+#define MAX_TX_DATALEN (UINT32_MAX - 1)
 
 /**
  * @brief ISOTP context type
@@ -35,30 +59,35 @@ typedef enum isotp_state_e isotp_state_t;
  * by any ISOTP functions.
  */
 struct isotp_ctx_s {
-    can_frame_t* rx_frame;
-    can_frame_t* tx_frame;
-    can_frame_format_t can_format;
+    can_format_t can_format;  // set at initialization time only
+    uint8_t can_frame[64];
+    uint8_t can_frame_len;
 
-    isotp_addressing_mode_t addressing_mode;
-    uint8_t address_extension;
+    isotp_addressing_mode_t addressing_mode;  // ISOTP addressing mode
+                                              // set at initialization time only
+    uint8_t addr_ext;  // address extension for extended or mixed ISOTP addressing modes
 
-    isotp_mode_t mode;
     uint64_t wait_interval_us;
 
     uint32_t total_datalen;
     uint32_t remaining;
-
-    isotp_state_t state;
 
     uint8_t fs_blocksize;  // blocksize from the last FC
     uint64_t fs_stmin;     // CF gap, STmin in usec
 
     uint64_t timestamp_us;
 
-    // transport related items
-    void* tpt_ctx;
-    isotp_rx_f tpt_receive_f;
-    isotp_tx_f tpt_send_f;
+    void* can_ctx;
+    isotp_rx_f can_rx_f;
+    isotp_tx_f can_tx_f;
+
+    /**
+     * @brief FC.WAIT frames
+     * @ref ISO-15765-2:2016, section 9.7
+     */
+    uint8_t fc_wait_max;    // max number of FC.WAIT frames that can be sent
+                            // set at initialization time only
+    uint8_t fc_wait_count;  // number of FC.WAIT frames received
 };
 typedef struct isotp_ctx_s isotp_ctx_t;
 
@@ -80,18 +109,19 @@ inline uint32_t MIN(const uint32_t a, const uint32_t b) { return ((a) < (b) ? a 
  * If a valid ISOTP SF, read the frame into the provided buffer.
  *
  * @param ctx - ISOTP context
- * @param recv_buf_p - pre-allocated buffer to copy the payload from the SF into, if the SF is valid
+ * @param recv_buf_p - pre-allocated buffer to copy the payload from the SF into,
+ *                     if the CAN frame contains an SF frame
  * @param recv_buf_sz - size of the pre-allocated buffer
- * @param recv_len - updated with the total amount of data received on a successfully completed reception
+ * @param timeout_us - (unused)
+ *
  * @returns
- *     ISOTP_RC_INVALID_FRAME - the last received CAN frame is invalid and has been dropped
- *     ISOTP_RC_DONE - the receive is complete.  All received data is in the recv_buf_p
- *                     and recv_len has been updated with the total length received
- *     otherwise- error code indicating failure.
- *                The entire receive has been aborted and must be restarted
- *                recv_len is invalid
+ * on success (>=0), number of payload bytes received into the buffer
+ * otherwise (<0), error code indicating the failure
  */
-isotp_rc_t receive_sf(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv_buf_sz, uint32_t* recv_len);
+int receive_sf(isotp_ctx_t* ctx,
+               uint8_t* recv_buf_p,
+               const int recv_buf_sz,
+               const uint64_t timeout_us __attribute__((unused)));
 
 /**
  * @brief prepare an ISOTP SF CAN frame from the provided buffer
@@ -101,13 +131,19 @@ isotp_rc_t receive_sf(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv
  *
  * @param ctx - ISOTP context
  * @param send_buf_p - pre-allocated buffer to copy payload from into the SF
- * @param recv_buf_sz - size of the payload in the buffer
- * @returns
- *     on success, ISOTP_RC_TRANSMIT.  The tx_frame in the ISOTP context is ready to be sent.
- *     on failure, error code
- */
-isotp_rc_t transmit_sf(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32_t send_buf_len);
+ * @param send_buf_len - size of the payload in the buffer to send
+ *                       has to fit into an SF
 
+ * @returns
+ * on success (>=0), number of payload bytes copied into the CAN frame
+ * otherwise (<0), error code indicating the failure
+ */
+int send_sf(isotp_ctx_t* ctx,
+            const uint8_t* send_buf_p,
+            const int send_buf_len,
+            const uint64_t timeout_us __attribute__((unused)));
+
+#if 0
 /**
  * @brief process an incoming CAN frame as an ISOTP FF
  *
@@ -199,7 +235,8 @@ isotp_rc_t transmit_fc(isotp_ctx_t* ctx, const isotp_fc_fs_t fs, const uint8_t b
  *     otherwise - error code indicating failure
  *                 The data transfer is aborted
  */
-isotp_rc_t receive_fc(isotp_ctx_t* ctx);
+int receive_fc(isotp_ctx_t* ctx);
+#endif
 
 /**
  * @brief convert an STmin time value, in usec, into the parameter value for an ISOTP FC frame
@@ -232,3 +269,52 @@ bool fc_stmin_usec_to_parameter(const uint64_t stmin_usec, uint8_t* stmin_param)
 bool fc_stmin_parameter_to_usec(const uint8_t stmin_param, uint64_t* stmin_usec);
 
 uint64_t get_time(void);
+
+/**
+ * @brief return a pointer to the start of the ISOTP frame data, excluding the address extension
+ *
+ * @param ctx - the ISOTP context containing the CAN frame
+ *
+ * @returns
+ * on success, non-NULL pointer to the start of the ISOTP frame data within the CAN frame
+ * otherwise, NULL.  The ctx parameter or ISOTP addressing mode is invalid
+ */
+uint8_t* frame_data_ptr(isotp_ctx_t* ctx);
+
+/**
+ * @brief return the length of the CAN frame, excluding the ISOTP address extension
+ *
+ * @param ctx - the ISOTP context containing the CAN frame
+ *
+ * @returns
+ * on success (>=0) - length of the ISOTP frame data
+ * otherwise (<0) - error code
+ *     -EINVAL - the context parameter is invalid
+ *     -EFAULT - the ISOTP addressing mode in the context is invalid
+ */
+int frame_datalen(const isotp_ctx_t* ctx);
+
+/**
+ * @brief return the maximum CAN frame data length
+ *
+ * Based on the ISOTP addressing mode and the CAN format
+ *
+ * @param addr_mode - the ISOTP addressing mode
+ * @param can_format - the CAN format
+ *
+ * @returns
+ * on success (>=0) - the maximum CAN frame data length, not including the address extension byte
+ * otherwise (<0) - error code
+ */
+int max_datalen(const isotp_addressing_mode_t addr_mode, const can_format_t can_format);
+
+/**
+ * @brief return the length of the address extension, based on the ISOTP addressing mode used
+ *
+ * @param addr_mode - the ISOTP addressing mode
+ *
+ * @returns
+ * on success, (0 or 1) - length of the address extension
+ * otherwise (<0) - error code
+ */
+int address_extension_len(const isotp_addressing_mode_t addr_mode);

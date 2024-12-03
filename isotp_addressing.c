@@ -21,71 +21,78 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
+
+#include <assert.h>
 
 #include "isotp.h"
 #include "isotp_private.h"
 
-int isotp_ctx_init(isotp_ctx_t*                  ctx,
-                   const can_format_t            can_format,
-                   const isotp_addressing_mode_t isotp_addressing_mode,
-                   const uint8_t                 isotp_address_extension)
+uint8_t* frame_data_ptr(isotp_ctx_t* ctx)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    int ae_l = address_extension_len(ctx->addressing_mode);
+    if (ae_l < 0) {
+        return ae_l;
+    }
+
+    assert(ae_l < sizeof(ctx->can_frame));
+    return (ctx->can_frame + ae_l);
+}
+
+int frame_datalen(const isotp_ctx_t* ctx)
 {
     if (ctx == NULL) {
         return -EINVAL;
     }
 
-    memset(ctx, 0, sizeof(*ctx));
-
-    // setup the CAN frame format
-    // this is immutable once set
-    switch (can_format) {
-    case CAN_FORMAT:
-    case CANFD_FORMAT:
-        ctx->can_format = can_format;
-        break;
-
-    case NULL_CAN_FORMAT:
-    case LAST_CAN_FORMAT:
-        return -ERANGE;
-        break;
+    int ae_l = address_extension_len(ctx->addressing_mode);
+    if (ae_l < 0) {
+        return ae_l;
     }
 
-    // setup the ISOTP address extension
-    // this is immutable once set
-    switch (isotp_addressing_mode) {
+    assert(ctx->can_frame_len >= ae_l);
+    return ctx->can_frame_len - ae_l;
+}
+
+int max_datalen(const isotp_addressing_mode_t addr_mode, const can_format_t can_format)
+{
+    int can_dl = can_max_datalen(can_format);
+    if (can_dl < 0) {
+        return can_dl;
+    }
+
+    int ae_l = address_extension_len(addr_mode);
+    if (ae_l < 0) {
+        return ae_l;
+    }
+
+    assert(can_dl > ae_l);
+    return can_dl - ae_l;
+}
+
+int address_extension_len(const isotp_addressing_mode_t addr_mode)
+{
+    switch (addr_mode) {
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        ctx->addr_mode = isotp_addressing_mode;
+        // no address extension byte
+        return 0;
         break;
 
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
-        ctx->addr_mode = isotp_addressing_mode;
-        ctx->addr_ext = isotp_address_extension;
+        // one leading address extension byte
+        return 1;
         break;
 
     case NULL_ISOTP_ADDRESSING_MODE:
     case LAST_ISOTP_ADDRESSING_MODE:
     default:
-        return -ERANGE;
-        break;
+        // invalid addressing mode
+        return -EFAULT;
     }
-
-    return EOK;
-}
-
-isotp_rc_t isotp_ctx_reset(isotp_ctx_t* ctx) {
-    assert(ctx != NULL);
-
-    ctx->timestamp = 0;
-    ctx->remaining = 0;
-    ctx->blocksize = 0;
-    ctx->blocks_remaining = 0;
-    ctx->sequence_number = 0;
-    ctx->address_extension = 0;
-
-    ctx->state = ISOTP_STATE_IDLE;
-
-    return ISOTP_RC_OK;
 }

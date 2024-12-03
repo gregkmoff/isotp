@@ -1,3 +1,30 @@
+/**
+ * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+#include <stdatomic.h>
+
 #include "isotp.h"
 #include "isotp_private.h"
 
@@ -21,6 +48,8 @@ static uint8_t get_pci_from_frame(const isotp_addressing_mode_t addressing_mode,
         break;
     }
 }
+
+#if 0
 
 static isotp_rc_t isotp_receive_idle_state(isotp_ctx_t* ctx,
                          uint8_t* recv_buf_p,
@@ -248,4 +277,154 @@ isotp_rc_t isotp_send(isotp_ctx_t* ctx,
     if ((send_len) < max_sf_len(ctx->addressing_mode)) {
     } else {
     }
+}
+
+int isotp_process(isotp_ctx_t* ctx) {
+}
+
+int isotp_transmit_start(isotp_ctx_t* ctx, const uint8_t* payload_p, const int payload_len)
+{
+    if ((ctx == NULL) || (payload_p == NULL)) {
+        return -EINVAL;
+    }
+
+    if ((payload_len < 0) || (payload_len > ISOTP_MAX_PAYLOAD_LEN)) {
+        return -ERANGE;
+    }
+
+    switch (ctx->expected_frame) {
+    case ISOTP_IDLE:
+        // initiate the transmit
+        return isotp_
+        break;
+
+    case ISOTP_SF_FRAME:
+        // ???
+        break;
+
+    case ISOTP_FF_FRAME:
+        // ???
+        break;
+
+    case ISOTP_CF_FRAME:
+        // ???
+        break;
+
+    case ISOTP_FC_FRAME:
+        // ???
+        break;
+
+    default:
+        // protocol is in an invalid state
+        // need to reset the context and start over
+        return -EPROTO;
+        break;
+    }
+}
+
+int isotp_write(isotp_ctx_t* ctx,
+                const uint8_t* send_buf_p,
+                const int send_len)
+{
+    if ((ctx == NULL) || (send_buf_p == NULL)) {
+        return -EINVAL;
+    }
+}
+
+int isotp_read(isotp_ctx_t* ctx,
+               const uint8_t* recv_buf_p,
+               const int recv_buf_sz)
+{
+}
+#endif
+
+int isotp_ctx_init(isotp_ctx_t* ctx,
+                   const can_format_t can_format,
+                   const isotp_addressing_mode_t isotp_addressing_mode,
+                   const uint8_t max_fc_wait_frames,
+                   void* can_ctx,
+                   isotp_rx_f can_rx_f,
+                   isotp_tx_f can_tx_f)
+{
+    if ((ctx == NULL) ||
+        (can_rx_f == NULL) ||
+        (can_tx_f == NULL)) {
+        return -EINVAL;
+    }
+
+    memset(ctx, 0, sizeof(*ctx));
+
+    switch (can_format) {
+        case CAN_FORMAT:
+        case CANFD_FORMAT:
+            ctx->can_format = can_format;
+            break;
+
+        case NULL_CAN_FORMAT:
+        case LAST_CAN_FORMAT:
+        default:
+            return -ERANGE;
+            break;
+    }
+
+    switch (isotp_addressing_mode) {
+        case ISOTP_NORMAL_ADDRESSING_MODE:
+        case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
+        case ISOTP_EXTENDED_ADDRESSING_MODE:
+        case ISOTP_MIXED_ADDRESSING_MODE:
+            ctx->addressing_mode = isotp_addressing_mode;
+            break;
+
+        case NULL_ISOTP_ADDRESSING_MODE:
+        case LAST_ISOTP_ADDRESSING_MODE:
+        default:
+            return -ERANGE;
+            break;
+    }
+
+    ctx->fc_wait_max = max_fc_wait_frames;
+
+    ctx->can_ctx = can_ctx;
+    ctx->can_rx_f = can_rx_f;
+    ctx->can_tx_f = can_tx_f;
+
+    // finally, reset everything and set to the IDLE state
+    return isotp_ctx_reset(ctx);
+}
+
+int isotp_ctx_reset(isotp_ctx_t* ctx)
+{
+    if (ctx == NULL) {
+        return -EINVAL;
+    }
+
+    ctx->total_datalen = 0;
+    ctx->remaining = 0;
+    ctx->fs_blocksize = 0;
+    ctx->fs_stmin = 0;
+    ctx->timestamp_us = 0;
+    ctx->fc_wait_count = 0;
+
+    atomic_store(&(ctx->state), ISOTP_IDLE);
+
+    return EOK;
+}
+
+int get_isotp_address_extension(const isotp_ctx_t* ctx)
+{
+    if (ctx == NULL) {
+        return -EINVAL;
+    }
+
+    return ctx->addr_ext;
+}
+
+int set_isotp_address_extension(isotp_ctx_t* ctx, const uint8_t ae)
+{
+    if (ctx == NULL) {
+        return -EINVAL;
+    }
+
+    ctx->addr_ext = ae;
+    return EOK;
 }

@@ -1,6 +1,31 @@
+/**
+ * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #pragma once
 
-#include "can.h"
+#include <can/can.h>
 
 /**
  * @ref ISO-15765-2:2016
@@ -8,51 +33,8 @@
  * Implementation of the ISOTP protocol used for Unified Diagnostic Services.
  */
 
-/**
- * @brief ISOTP return code values
- */
-enum isotp_rc_e {
-    ISOTP_RC_OK,
-
-    // notifications
-    ISOTP_RC_TRANSMIT,   // the tx_frame can be transmitted
-    ISOTP_RC_RECEIVE,    // the next CAN frame can be received into rx_frame
-    ISOTP_RC_WAIT,       // the caller should wait the indicated time before calling again
-    ISOTP_RC_DONE,       // the receive or transmit is done
-
-    // errors
-    ISOTP_RC_INVALID_STATE,      // wrong state for the requested action
-    ISOTP_RC_BUFFER_OVERFLOW,    // receive buffer is too small to receive ISOTP payload
-    ISOTP_RC_ALLOC,              // memory allocation error
-    ISOTP_RC_INVALID_ADDRESSING_MODE,
-    ISOTP_RC_INVALID_FRAME,      // the frame is invalid
-
-    // the following errors indicate that the data transfer is aborted
-    ISOTP_RC_ABORT_INVALID_FS,   // Flow Status (FS) received is invalid
-    ISOTP_RC_ABORT_BUFFER_OVERFLOW,  // FS OVFLW received
-};
-typedef enum isotp_rc_e isotp_rc_t;
-
-static inline bool isotp_transfer_aborted(const isotp_rc_t rc) {
-    switch (rc) {
-    case ISOTP_RC_ABORT_INVALID_FS:
-    case ISOTP_RC_ABORT_BUFFER_OVERFLOW:
-        return true;
-
-    default:
-        return false;
-    }
-}
-
-/**
- * @brief ISOTP mode values
- */
-enum isotp_mode_e {
-    ISOTP_MODE_IDLE,
-    ISOTP_MODE_TRANSMIT_IN_PROGRESS,
-    ISOTP_MODE_RECEIVE_IN_PROGRESS,
-};
-typedef enum isotp_mode_e isotp_mode_t;
+struct isotp_ctx_s;
+typedef struct isotp_ctx_s isotp_ctx_t;
 
 /**
  * Addressing Modes
@@ -81,65 +63,53 @@ typedef enum isotp_mode_e isotp_mode_t;
  * - data bytes 3-N are the payload
  */
 enum isotp_addressing_mode_e {
+    NULL_ISOTP_ADDRESSING_MODE,
     ISOTP_NORMAL_ADDRESSING_MODE,
     ISOTP_NORMAL_FIXED_ADDRESSING_MODE,
     ISOTP_EXTENDED_ADDRESSING_MODE,
     ISOTP_MIXED_ADDRESSING_MODE,
+    LAST_ISOTP_ADDRESSING_MODE
 };
 typedef enum isotp_addressing_mode_e isotp_addressing_mode_t;
 
 /**
- * @brief type definition of a function used to receive an ISOTP frame of data
+ * @brief type definition of a function used to receive a CAN frame containing ISOTP data
  *
- * @parameters
- *     ctx - pointer to the transport context (opaque to ISOTP)
- *     rx_buf_p - pointer to the buffer where the frame is received into
- *     rx_buf_sz - size of the buffer
+ * This call blocks until a frame has been received, the timeout occurs, or an error occurs.
+ *
+ * @param rxfn_ctx - pointer to the transport context (opaque to ISOTP)
+ * @param rx_buf_p - pointer to the buffer where a CAN frame is received into
+ * @param rx_buf_sz - size of the buffer
+ * @param timeout_usec - timeout value, in microseconds
  *
  * @returns
  *     <0 - an error occured
  *     >=0 - number of bytes returned into the receive buffer
  */
-typedef int (*isotp_rx_f)(void* ctx, uint8_t* rx_buf_p, const uint32_t rx_buf_sz);
+typedef int (*isotp_rx_f)(void* rxfn_ctx,
+                          uint8_t* rx_buf_p,
+                          const uint32_t rx_buf_sz,
+                          const uint64_t timeout_usec);
 
 /**
- * @brief type definition of a function used to transmit an ISOTP frame of data
+ * @brief type definition of a function used to transmit a CAN frame containing ISOTP data
  *
- * This call blocks until the total frame has been transmitted, or
+ * This call blocks until the total frame has been transmitted, the timeout occurs, or
  * an error occurs.
  *
- * @parameters
- *     ctx - pointer to the transport context (opaque to ISOTP)
- *     tx_buf_p - pointer to the buffer containing the frame to be transmitted
- *     tx_len - length of the frame to be transmitted
+ * @param txfn_ctx - pointer to the transport context (opaque to ISOTP)
+ * @param tx_buf_p - pointer to the buffer containing the CAN frame to be transmitted
+ * @param tx_len - length of the CAN frame to be transmitted
+ * @param timeout_usec - timeout value, in microseconds
  *
  * @returns
  *     <0 - an error occurred
  *     >=0 - number of bytes transmitted from the transmit buffer
  */
-typedef int (*isotp_tx_f)(void* ctx, const uint8_t* tx_buf_p, const uint32_t tx_len);
-
-#if 0
-/**
- * @brief ISOTP context type
- *
- * An ISOTP context must be pre-allocated and initialized before used
- * by any ISOTP functions.
- */
-struct isotp_ctx_s {
-    can_msg_t* rx_frame;
-    can_msg_t* tx_frame;
-    can_frame_format_t can_format;
-
-    isotp_addressing_mode_t addressing_mode;
-    uint8_t address_extension;
-
-    isotp_mode_t mode;
-};
-typedef struct isotp_ctx_s isotp_ctx_t;
-#endif
-struct isotp_ctx_s;
-typedef struct isotp_ctx_s isotp_ctx_t;
+typedef int (*isotp_tx_f)(void* txfn_ctx,
+                          const uint8_t* tx_buf_p,
+                          const int tx_len,
+                          const uint64_t timeout_usec);
 
 /**
  * @brief initializes an ISOTP context
@@ -147,15 +117,25 @@ typedef struct isotp_ctx_s isotp_ctx_t;
  * A pre-allocated ISOTP context needs to be initialized once before it is used.
  *
  * @param ctx - pointer to a pre-allocated isotp_ctx_t
- * @param can_frame_format - format of the CAN frames
- * @param addressing_mode - what ISOTP addressing mode is used (see above)
- * @returns return code indicating whether the context was
- *          initialized
+ * @param can_format - format of the CAN frames
+ * @param isotp_addressing_mode - what ISOTP addressing mode is used (see above)
+ * @param max_fc_wait_frames - maximum number of FC.WAIT frames allowed
+ *                             if set to zero, FC.WAIT frames are ignored
+ * @param can_ctx - opaque context passed to transmit/receive CAN frame function
+ *                  (user provided, unrelated to the ctx parameter above)
+ * @param can_rx_f - function invoked to receive a CAN frame
+ * @param can_tx_f - function invoked to transmit a CAN frame
+ * @returns
+ * on success, 0.  The context is valid
+ * otherwise (<0); return code indicating failure
  */
-isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx,
-                          const can_frame_format_t can_frame_format,
-                          const isotp_addressing_mode_t addressing_mode,
-                          isotp_tx_f transport_send_f, isotp_rx_f transport_receive_f, void* transport_ctx);
+int isotp_ctx_init(isotp_ctx_t* ctx,
+                   const can_format_t can_format,
+                   const isotp_addressing_mode_t isotp_addressing_mode,
+                   const uint8_t max_fc_wait_frames,
+                   void* can_ctx,
+                   isotp_rx_f can_rx_f,
+                   isotp_tx_f can_tx_f);
 
 /**
  * @brief reset an ISOTP context
@@ -163,47 +143,73 @@ isotp_rc_t isotp_ctx_init(isotp_ctx_t* ctx,
  * An ISOTP context should be reset after a transmit or receive is completed.
  *
  * @param ctx - pointer to an isotp_ctx_t
- * @returns return code
- */
-isotp_rc_t isotp_ctx_reset(isotp_ctx_t* ctx);
-
-/**
- * @brief receive data via ISOTP into the receive buffer
- *
- * The caller keeps invoking this function to receive a message
- * being sent via ISOTP.
- *
- * @param ctx - ISOTP context
- * @param recv_buf_p - pre-allocated buffer to copy the payload from the SF into, if the SF is valid
- * @param recv_buf_sz - size of the pre-allocated buffer
- * @param recv_len - updated with the total length of the data that has been received
- *
  * @returns
- *     ISOTP_RC_TRANSMIT - transmit the CAN frame in tx_frame and re-invoke this function
- *     ISOTP_RC_RECEIVE - receive the next CAN frame into rx_frame and re-invoke this function
- *     ISOTP_RC_DONE - the receive is complete.  All received data is in the recv_buf_p
- *                     and the recv_len has been updated
- *     ISOTP_RC_WAIT - wait delay_us and re-invoke this function
- *     ISOTP_RC_ABORT - the entire receive has been aborted and must be restarted
- *     ISOTP_RC_DONE - the receive is complete.  All received data is in the recv_buf_p
- *                     and recv_len has been updated with the total length received
+ * on success, 0
+ * otherwise (<0), return code indicating failure
  */
-isotp_rc_t isotp_receive(isotp_ctx_t* ctx,
-                         uint8_t* recv_buf_p,
-                         const uint32_t recv_buf_sz,
-                         uint32_t* recv_len);
+int isotp_ctx_reset(isotp_ctx_t* ctx);
 
 /**
- * @brief transmit data via ISOTP from the send buffer
+ * @brief transmit data via ISOTP
  *
  * The caller invokes this function to initiate an ISOTP transmit.
  * The call is blocking until the data is transmitted, or an error occurs.
  *
+ * @param ctx - ISOTP context
+ * @param send_buf_p - pointer to the data to transmit
+ * @param send_buf_len - length of the data to transmit
+ * @param timeout - timeout during sending, in usec
+ *
  * @returns
- *    ISOTP_RC_DONE - the transmit is done
- *    ISOTP_RC_ERROR - an error occurred
- *    ISOTP_RC_TIMEOUT - a timeout occurred during the transmit sequence
+ * on success (>=0) - number of bytes transmitted
+ * otherwise (<0) - error code
  */
-isotp_rc_t isotp_send(isotp_ctx_t* ctx,
-                      const uint8_t* send_buf_p,
-                      const uint32_t send_len);
+int isotp_send(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len,
+               const uint64_t timeout);
+
+/**
+ * @brief receive data via ISOTP
+ *
+ * The caller invokes this function to receive data.
+ * The call is blocking until the data is transmitted, or an error occurs.
+ *
+ * @param ctx - ISOTP context
+ * @param recv_buf_p - pointer to the buffer where to write the received data
+ * @param recv_buf_sz - size of the receive buffer
+ * @param timeout - timeout during receiving, in usec
+ *
+ * @returns
+ * on success (>=0) - number of bytes received
+ * otherwise (<0) - error code
+ */
+int isotp_recv(isotp_ctx_t* ctx,
+               uint8_t* recv_buf_p,
+               const int recv_buf_sz,
+               const uint64_t timeout);
+
+/**
+ * @brief return the current ISOTP address extension
+ *
+ * @param ctx - ISOTP context
+ *
+ * @returns
+ * on success, address extension (in the range of 0x00-0xff)
+ * otherwise (<0) - error code
+ */
+int get_isotp_address_extension(const isotp_ctx_t* ctx);
+
+/**
+ * @brief set the ISOTP address extension for the next CAN frame
+ *
+ * @param ctx - ISOTP context
+ * @param ae - address extension to set to
+ *             this value will be used for all subsequent CAN frames sent
+ *             until the address extension is set again
+ *
+ * @returns
+ * on success, 0
+ * otherwise (<0) - error code
+ */
+int set_isotp_address_extension(isotp_ctx_t* ctx, const uint8_t ae);
