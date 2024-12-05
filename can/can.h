@@ -73,7 +73,7 @@ int can_max_dlc(const can_format_t format);
 int zero_can_frame(uint8_t* buf, const can_format_t format);
 
 /**
- * @brief pad a CAN frame with a padding pattern
+ * @brief pad a CAN frame with a padding pattern, returning DLC
  *
  * The CAN frame data is padded to the next DLC value.
  * For example, if a CAN frame has 9 bytes of data, the
@@ -90,6 +90,25 @@ int zero_can_frame(uint8_t* buf, const can_format_t format);
  *     <0 - failed to pad, error code
  */
 int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format);
+
+/**
+ * @brief pad a CAN frame with a padding pattern, returning length
+ *
+ * The CAN frame data is padded to the next DLC value.
+ * For example, if a CAN frame has 9 bytes of data, the
+ * next DLC is for 12 bytes so the three bytes of the data
+ * are padded.  The datalen is read to see how long the
+ * data is, and the DLC is set after padding to include
+ * both payload and padding.
+ *
+ * @param buf - pointer to the CAN frame data
+ * @param buf_len - length of the CAN frame data
+ * @param format - CAN frame format for the resulting frame
+ * @returns
+ *     >=0 - length of the successfully padded frame, including padding
+ *     <0 - failed to pad, error code
+ */
+int pad_can_frame_len(uint8_t* buf, const int buf_len, const can_format_t format);
 
 /**
  * @brief convert from the DLC to the actual CAN data length

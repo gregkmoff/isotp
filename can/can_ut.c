@@ -237,6 +237,64 @@ static void pad_can_frame_canfd_format_test(void** state) {
     }
 }
 
+/**
+ * pad_can_frame_len() tests
+ */
+static void pad_can_frame_len_invalid_format_test(void** state) {
+    uint8_t buf[64] = {0};
+    assert_true(pad_can_frame_len(NULL, 0, NULL_CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, 0, NULL_CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(NULL, 0, LAST_CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, 0, LAST_CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, -1, CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, CAN_MAX_DATALEN + 1, CAN_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, -1, CANFD_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(buf, CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -EINVAL);
+}
+
+static void pad_can_frame_len_can_format_test(void** state) {
+    uint8_t buf[CAN_MAX_DATALEN] = {0};
+    uint8_t padding[CAN_MAX_DATALEN] = {0};
+
+    memset(padding, CAN_PADDING, sizeof(padding));
+
+    for (int len = 0; len < CAN_MAX_DATALEN; len++) {
+        memset(buf, 0, sizeof(buf));
+        int rc = pad_can_frame_len(buf, len, CAN_FORMAT);
+        assert_true(rc >= 0);
+        assert_true(rc == 8);
+        assert_memory_equal(&(buf[len]), padding, CAN_MAX_DATALEN - len);
+    }
+}
+
+static void pad_can_frame_len_canfd_format_test(void** state) {
+    uint8_t buf[CANFD_MAX_DATALEN + 1] = {0};
+    uint8_t padding[CANFD_MAX_DATALEN + 1] = {0};
+
+    memset(padding, CAN_PADDING, sizeof(padding));
+
+    // test padding form frames with data lengths 0-8
+    for (int len = 0; len <= CAN_MAX_DATALEN; len++) {
+        memset(buf, 0, sizeof(buf));
+        int rc = pad_can_frame_len(buf, len, CANFD_FORMAT);
+        assert_true(rc >= 0);
+        assert_true(rc == 8);
+        assert_memory_equal(&(buf[len]), padding, CAN_MAX_DATALEN - len);
+    }
+
+    // test padding for frames with data lengths 9-64
+    for (int len = 9; len <= CANFD_MAX_DATALEN; len++) {
+        memset(buf, 0, sizeof(buf));
+        int dlc = can_datalen_to_dlc(len, CANFD_FORMAT);
+        int datalen = can_dlc_to_datalen(dlc, CANFD_FORMAT);
+        int cmp_len = datalen - len;
+        int rc = pad_can_frame_len(buf, len, CANFD_FORMAT);
+        assert_true(rc >= 0);
+        assert_true(rc == datalen);
+        assert_memory_equal(&(buf[len]), padding, cmp_len);
+    }
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(can_max_datalen_test),
@@ -251,6 +309,9 @@ int main(void) {
         cmocka_unit_test(pad_can_frame_can_format_test),
         cmocka_unit_test(pad_can_frame_canfd_format_test),
         cmocka_unit_test(pad_can_frame_invalid_format_test),
+        cmocka_unit_test(pad_can_frame_len_invalid_format_test),
+        cmocka_unit_test(pad_can_frame_len_can_format_test),
+        cmocka_unit_test(pad_can_frame_len_canfd_format_test),
     };
  
     return cmocka_run_group_tests(tests, NULL, NULL);

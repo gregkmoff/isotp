@@ -138,8 +138,9 @@ int zero_can_frame(uint8_t* buf, const can_format_t format) {
     return EOK;
 }
 
-int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
+static int pad_can_frame_internal(uint8_t* buf, const int buf_len, const can_format_t format, int* dlc) {
     if ((buf == NULL) ||
+        (dlc == NULL) ||
         !valid_can_format(format) ||
         (buf_len < 0) ||
         (buf_len > can_max_datalen(format))) {
@@ -147,14 +148,14 @@ int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
     }
 
     // get the DLC for the length of the data
-    int dlc = can_datalen_to_dlc(buf_len, format);
-    if (dlc < 0) {
-        return dlc;
+    *dlc = can_datalen_to_dlc(buf_len, format);
+    if (*dlc < 0) {
+        return *dlc;
     }
 
     // get the corresponding datalen based on the DLC
     // (we need to pad to a minimum of 8 bytes (CAN CLASSIC))
-    int expected_len = can_dlc_to_datalen(dlc, format);
+    int expected_len = can_dlc_to_datalen(*dlc, format);
     if (expected_len < 0) {
         return expected_len;
     }
@@ -166,7 +167,29 @@ int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
         (void)memset(&(buf[buf_len]), CAN_PADDING, expected_len - buf_len);
     }
 
-    return dlc;
+    return expected_len;
+}
+
+int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
+    int dlc = 0;
+
+    int rc = pad_can_frame_internal(buf, buf_len, format, &dlc);
+    if (rc < 0) {
+        return rc;
+    } else {
+        return dlc;
+    }
+}
+
+int pad_can_frame_len(uint8_t* buf, const int buf_len, const can_format_t format) {
+    int dlc = 0;
+    int rc = pad_can_frame_internal(buf, buf_len, format, &dlc);
+
+    if (dlc < 0) {
+        return dlc;
+    } else {
+        return rc;
+    }
 }
 
 int can_dlc_to_datalen(const int dlc, const can_format_t format) {
