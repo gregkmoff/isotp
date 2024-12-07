@@ -92,12 +92,14 @@ struct isotp_ctx_s {
 typedef struct isotp_ctx_s isotp_ctx_t;
 
 // ref ISO-15765-2:2016, table 18
-enum isotp_fc_fs_e {
-    ISOTP_FC_FS_CTS,
-    ISOTP_FC_FS_WAIT,
-    ISOTP_FC_FS_OVFLW,
+enum isotp_fc_flowstatus_e {
+    ISOTP_FC_FLOWSTATUS_NULL,
+    ISOTP_FC_FLOWSTATUS_CTS,
+    ISOTP_FC_FLOWSTATUS_WAIT,
+    ISOTP_FC_FLOWSTATUS_OVFLW,
+    ISOTP_FC_FLOWSTATUS_LAST
 };
-typedef enum isotp_fc_fs_e isotp_fc_fs_t;
+typedef enum isotp_fc_flowstatus_e isotp_fc_flowstatus_t;
 
 inline uint32_t MAX(const uint32_t a, const uint32_t b) { return ((a) > (b) ? a : b); }
 inline uint32_t MIN(const uint32_t a, const uint32_t b) { return ((a) < (b) ? a : b); }
@@ -133,7 +135,6 @@ int receive_sf(isotp_ctx_t* ctx,
  * @param send_buf_p - pre-allocated buffer to copy payload from into the SF
  * @param send_buf_len - size of the payload in the buffer to send
  *                       has to fit into an SF
-
  * @returns
  * on success (>=0), number of payload bytes copied into the CAN frame
  * otherwise (<0), error code indicating the failure
@@ -142,6 +143,27 @@ int send_sf(isotp_ctx_t* ctx,
             const uint8_t* send_buf_p,
             const int send_buf_len,
             const uint64_t timeout_us __attribute__((unused)));
+
+/**
+ * @brief prepare an ISOTP Flow Control (FC) CAN frame
+ *
+ * Create an ISOTP FC CAN frame and copy to the can_frame in the ISOTP context.
+ *
+ * @param ctx - ISOTP context
+ * @param fc_flowstatus - flow status to set, if any (ref ISO-15765-2:2016, section 9.6.5.1)
+ * @param fc_blocksize - blocksize to transmit (ref ISO-15765-2:2016, section 9.6.5.3)
+ * @param fs_stmin - separation time code (ref ISO-15765-2:2016, section 9.6.5.4)
+ *                   the function fc_stmin_usec_to_parameter() is used to convert
+ *                   from microseconds to the STmin code value
+ *
+ * @returns
+ * on success (>=0), number of payload bytes copied into the CAN frame
+ * otherwise (<0), error code indicating the failure
+ */
+int send_fc(isotp_ctx_t* ctx,
+            const isotp_fc_flowstatus_t fc_flowstatus,
+            const uint8_t fc_blocksize, 
+            const uint8_t fc_stmin);
 
 #if 0
 /**
@@ -204,54 +226,64 @@ isotp_rc_t transmit_sf(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32
  *                 The data transfer is aborted
  */
 isotp_rc_t receive_cf(isotp_ctx_t* ctx, const uint8_t* recv_buf_p, const uint32_t recv_buf_sz, uint8_t* seq_num);
-
-/**
- * @brief prepare an ISOTP FC CAN frame
- *
- * Create an ISOTP FC (Flow Control) CAN frame with the given values.
- *
- * @ref ISO-15765-2:2016, section 9.6.5
- *
- * @params ctx - ISOTP context
- * @params fs - flow status flag to include in the FC
- * @params blocksize - blocksize value to include in the FC
- * @params stmin_usec - STmin time value (in usec) to include in the FC
- *
- * @returns
- *     ISOTP_RC_TRANSMIT - the FC CAN frame has been created in ctx->tx_frame.
- *                         The caller should now transmit it.
- *     otherwise - error code indicating failure
- *                 The data transfer is aborted
- */
-isotp_rc_t transmit_fc(isotp_ctx_t* ctx, const isotp_fc_fs_t fs, const uint8_t blocksize, const uint64_t stmin_usec);
-
-/**
- * @brief receive and process an ISOTP FC frame
- *
- * @params ctx - ISOTP context
- * @returns
- *     ISOTP_RC_RECEIVE - the FC CAN frame has been received and processed
- *                        the caller should return and receive another CAN frame for processing
- *     otherwise - error code indicating failure
- *                 The data transfer is aborted
- */
-int receive_fc(isotp_ctx_t* ctx);
 #endif
 
 /**
- * @brief convert an STmin time value, in usec, into the parameter value for an ISOTP FC frame
+ * @brief parse a CAN frame as an ISOTP FC and extract the relevant flow control parameters
+ *
+ * @param ctx - pointer to the ISOTP context containing the CAN frame
+ * @param flowstatus - updated with the extracted flowstatus parameter
+ * @param blocksize - updated with the extractd blocksize parameter
+ * @param stmin_usec - updated with the STmin time value in microseconds
+ *
+ * @returns
+ * on success, 0
+ * otherwise,
+ *     -EINVAL = a parameter is invalid
+ *     -EMSGSIZE = the CAN frame is too small to be an FC
+ *     -ENOMSG = the CAN frame does not contain an FC
+ *     -EBADMSG = the ISOTP FC contains an invalid flowstatus
+ *     <0 = other error
+ *     If any error occurs the update parameters are all invalid
+ */
+int parse_fc(isotp_ctx_t* ctx,
+             isotp_fc_flowstatus_t* flowstatus,
+             uint8_t* blocksize,
+             int* stmin_usec);
+
+/**
+ * @brief create an ISOTP FC in a CAN frame
+ *
+ * @param ctc - pointer to the ISOTP context containing the CAN frame
+ * @param flowstatus - which flowstatus flag to add to the FC
+ * @param blocksize - blocksize parameter to add to the FC
+ * @param stmin_usec - STmin time value (in microseconds) to add to the FC
+ *
+ * @return
+ * on success, 0
+ * otherwise,
+ *     -EINVAL = a parameter is invalid
+ *     <0 = other error
+ */
+int prepare_fc(isotp_ctx_t* ctx,
+               const isotp_fc_flowstatus_t flowstatus,
+               const uint8_t blocksize,
+               const int stmin_usec);
+
+/**
+ * @brief convert an STmin time value, in microseconds, to the STmin parameter value
  *
  * The STmin parameter goes into an ISOTP FC frame
  *
  * @ref ISO-15765-2:2016, section 9.6.5.4, table 20
  *
  * @param stmin_usec - the STmin usec value
- * @param stmin_param - pointer to write the parameter for an ISOTP FC frame
  *
- * @returns whether or not the conversion was successful
- *          if the conversion was not successful, stmin_param is invalid
+ * @returns
+ *     STmin code for ISOTP FC frame, in the range of 0x00-0x7f or 0xf1-0xf9
+ *     All other values are invalid
  */
-bool fc_stmin_usec_to_parameter(const uint64_t stmin_usec, uint8_t* stmin_param);
+uint8_t fc_stmin_usec_to_parameter(const int stmin_usec);
 
 /**
  * @brief convert an STmin parameter value to usec
@@ -261,12 +293,12 @@ bool fc_stmin_usec_to_parameter(const uint64_t stmin_usec, uint8_t* stmin_param)
  * @ref ISO-15765-2:2016, section 9.6.5.4, table 20
  *
  * @param stmin_param - the parameter from the ISOTP FC frame
- * @param stmin_usec - pointer to write the STmin usec value
  *
- * @returns whether or not the conversion was successful
- *          if the conversion was not successful, stmin_usec is invalid
+ * @returns
+ *     the STmin time value, in microseconds, in the range of 0-127000us
+ *     All other values are invalid
  */
-bool fc_stmin_parameter_to_usec(const uint8_t stmin_param, uint64_t* stmin_usec);
+int fc_stmin_parameter_to_usec(const uint8_t stmin_param);
 
 uint64_t get_time(void);
 
