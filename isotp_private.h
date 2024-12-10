@@ -21,7 +21,7 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #pragma once
 
@@ -65,12 +65,13 @@ struct isotp_ctx_s {
 
     isotp_addressing_mode_t addressing_mode;  // ISOTP addressing mode
                                               // set at initialization time only
-    uint8_t addr_ext;  // address extension for extended or mixed ISOTP addressing modes
+    uint8_t address_extension;  // address extension for extended or mixed ISOTP addressing modes
 
     uint64_t wait_interval_us;
 
-    uint32_t total_datalen;
-    uint32_t remaining;
+    int total_datalen;
+    int remaining_datalen;
+    int sequence_num;
 
     uint8_t fs_blocksize;  // blocksize from the last FC
     uint64_t fs_stmin;     // CF gap, STmin in usec
@@ -101,8 +102,14 @@ enum isotp_fc_flowstatus_e {
 };
 typedef enum isotp_fc_flowstatus_e isotp_fc_flowstatus_t;
 
-inline uint32_t MAX(const uint32_t a, const uint32_t b) { return ((a) > (b) ? a : b); }
-inline uint32_t MIN(const uint32_t a, const uint32_t b) { return ((a) < (b) ? a : b); }
+#define MAX(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+       _a > _b ? _a : _b; })
+#define MIN(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+       _a < _b ? _a : _b; })
 
 /**
  * @brief process an incoming CAN frame as an ISOTP SF
@@ -227,6 +234,14 @@ isotp_rc_t transmit_sf(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32
  */
 isotp_rc_t receive_cf(isotp_ctx_t* ctx, const uint8_t* recv_buf_p, const uint32_t recv_buf_sz, uint8_t* seq_num);
 #endif
+
+int parse_cf(isotp_ctx_t* ctx,
+             uint8_t* recv_buf_p,
+             const int recv_buf_sz);
+
+int prepare_cf(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len);
 
 /**
  * @brief parse a CAN frame as an ISOTP FC and extract the relevant flow control parameters
