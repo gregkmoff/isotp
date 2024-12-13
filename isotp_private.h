@@ -66,6 +66,7 @@ struct isotp_ctx_s {
     isotp_addressing_mode_t addressing_mode;  // ISOTP addressing mode
                                               // set at initialization time only
     uint8_t address_extension;  // address extension for extended or mixed ISOTP addressing modes
+    int address_extension_len;
 
     uint64_t wait_interval_us;
 
@@ -240,6 +241,14 @@ int parse_cf(isotp_ctx_t* ctx,
              const int recv_buf_sz);
 
 int prepare_cf(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len);
+
+int parse_ff(isotp_ctx_t* ctx,
+             uint8_t* recv_buf_p,
+             const int recv_buf_sz);
+
+int prepare_ff(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len);
 
