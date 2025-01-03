@@ -1,16 +1,42 @@
-#include <stdatomic.h>
+/**
+ * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <errno.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 
-#include "isotp.h"
-#include "isotp_private.h"
+#include <isotp.h>
+#include <isotp_private.h>
 
 #define NSEC_PER_SEC  (1000000000)
 #define USEC_PER_SEC  (1000000)
 #define NSEC_PER_USEC (1000)
 
-static void usec_to_ts(struct timespec *ts, const uint64_t us)
-{
+__attribute__((unused))
+static void usec_to_ts(struct timespec *ts, const uint64_t us) {
     ts->tv_sec = us / USEC_PER_SEC;
     ts->tv_nsec = (us % USEC_PER_SEC) * NSEC_PER_SEC;
 }
@@ -18,8 +44,7 @@ static void usec_to_ts(struct timespec *ts, const uint64_t us)
 int isotp_send(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len,
-               const uint64_t timeout)
-{
+               __attribute__((unused)) const uint64_t timeout) {
     if ((ctx == NULL) ||
         (send_buf_p == NULL)) {
         return -EINVAL;
@@ -29,9 +54,11 @@ int isotp_send(isotp_ctx_t* ctx,
         return -ERANGE;
     }
 
-    int rc = EOK;
-    bool done = false;
+    int rc = 0;
 
+    // TODO(gmoffatt): rework this
+#if 0
+    bool done = false;
     while (!done) {
         rc = EOK;
         done = false;
@@ -107,6 +134,7 @@ int isotp_send(isotp_ctx_t* ctx,
             break;
         }
     }
+#endif
 
     return rc;
 }

@@ -21,7 +21,7 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include <assert.h>
 #include <errno.h>
@@ -31,8 +31,8 @@
 #include <string.h>
 
 #include <can/can.h>
-#include "isotp.h"
-#include "isotp_private.h"
+#include <isotp.h>
+#include <isotp_private.h>
 
 #ifdef UNIT_TESTING
 extern void mock_assert(const int result, const char* const expression,
@@ -53,19 +53,7 @@ extern void mock_assert(const int result, const char* const expression,
 #define SF_ESC_NO_AE_PAYLOAD_LEN (6)
 #define SF_ESC_AE_PAYLOAD_LEN (5)
 
-/**
- * @brief return the maximum size of TX_DL for an SF
- *
- * @ref ISO-15765-2:2016, section 9.2
- *
- * @param ctx - ISOTP context
- *
- * @returns
- * on success, maximum SF data transmission size
- * otherwise, <0, error code
- */
-static int max_sf_datalen(const isotp_ctx_t* ctx)
-{
+int max_sf_datalen(const isotp_ctx_t* ctx) {
     if (ctx == NULL) {
         return -EINVAL;
     }
@@ -103,18 +91,10 @@ static int max_sf_datalen(const isotp_ctx_t* ctx)
 
 static int process_sf_no_esc(isotp_ctx_t* ctx,
                              uint8_t* recv_buf_p,
-                             const uint32_t recv_buf_sz)
-{
+                             const int recv_buf_sz) {
     if ((ctx == NULL) ||
         (recv_buf_p == NULL)) {
         return -EINVAL;
-    }
-
-    // get the address extension length; this will also be the offset into the CAN frame
-    // where the ISOTP SF PCI is
-    int ae_l = address_extension_len(ctx->addressing_mode);
-    if (ae_l < 0) {
-        return ae_l;
     }
 
     // make sure the receive buffer is sized appropriately
@@ -130,9 +110,9 @@ static int process_sf_no_esc(isotp_ctx_t* ctx,
     }
 
     // extract the PCI and make sure it's an SF
-    uint8_t sf_pci = ctx->can_frame[ae_l];
+    uint8_t sf_pci = ctx->can_frame[ctx->address_extension_len];
     if ((sf_pci & PCI_MASK) != SF_PCI) {
-        return -EBADMSG;
+        return -ENOMSG;
     }
 
     // extract the SF_DL
@@ -161,7 +141,7 @@ static int process_sf_no_esc(isotp_ctx_t* ctx,
 
     case 7:
         // only supported for non-extended addressing modes
-        if (ae_l != 0) {
+        if (ctx->address_extension_len != 0) {
             return -ENOTSUP;
         }
         break;
@@ -178,17 +158,16 @@ static int process_sf_no_esc(isotp_ctx_t* ctx,
         return -ENOBUFS;
     }
 
-    // payload starts one byte after the SF, which is one byte after the AE (if any)
-    uint8_t* dp = &(ctx->can_frame[ae_l + 1]);
+    // payload starts one byte after the SF
+    // which is one byte after the AE (if any)
+    uint8_t* dp = &(ctx->can_frame[ctx->address_extension_len + 1]);
     memcpy(recv_buf_p, dp, sf_dl);
     ctx->total_datalen = 0;
+    ctx->remaining_datalen = 0;
 
     // if applicable, store the address extension from the most recent CAN frame
-    if (ae_l > 0) {
-        int ae_rc = set_isotp_address_extension(ctx, ctx->can_frame[0]);
-        if (ae_rc < 0) {
-            return ae_rc;
-        }
+    if (ctx->address_extension_len > 0) {
+        ctx->address_extension = ctx->can_frame[0];
     }
 
     return sf_dl;
@@ -196,8 +175,7 @@ static int process_sf_no_esc(isotp_ctx_t* ctx,
 
 static int process_sf_with_esc(isotp_ctx_t* ctx,
                                uint8_t* recv_buf_p,
-                               const uint32_t recv_buf_sz)
-{
+                               const uint32_t recv_buf_sz) {
     if ((ctx == NULL) ||
         (recv_buf_p == NULL)) {
         return -EINVAL;
@@ -327,7 +305,8 @@ static int process_sf_with_esc(isotp_ctx_t* ctx,
         break;
     }
 
-    // payload starts two bytes after the SF, which is one byte after the AE (if any)
+    // payload starts two bytes after the SF
+    // which is one byte after the AE (if any)
     uint8_t* dp = &(ctx->can_frame[ae_l + 2]);
     memcpy(recv_buf_p, dp, sf_dl);
     ctx->total_datalen = 0;
@@ -343,13 +322,11 @@ static int process_sf_with_esc(isotp_ctx_t* ctx,
     return sf_dl;
 }
 
-int receive_sf(isotp_ctx_t* ctx,
-               uint8_t* recv_buf_p,
-               const int recv_buf_sz,
-               const uint64_t timeout_us __attribute__((unused)))
-{
-    if ((ctx == NULL) || (recv_buf_p == NULL) ||
-        (ctx->can_rx_f == NULL)) {
+int parse_sf(isotp_ctx_t* ctx,
+             uint8_t* recv_buf_p,
+             const int recv_buf_sz,
+             const uint64_t timeout_us __attribute__((unused))) {
+    if ((ctx == NULL) || (recv_buf_p == NULL)) {
         return -EINVAL;
     }
 
@@ -358,12 +335,7 @@ int receive_sf(isotp_ctx_t* ctx,
     }
 
     // verify that the frame contains an ISOTP SF header
-    uint8_t* pci = frame_data_ptr(ctx);
-    if (pci == NULL) {
-        return -EFAULT;
-    }
-
-    if ((*pci & PCI_MASK) != SF_PCI) {
+    if ((ctx->can_frame[ctx->address_extension_len] & PCI_MASK) != SF_PCI) {
         // not an SF
         return -EBADMSG;
     }
@@ -373,7 +345,8 @@ int receive_sf(isotp_ctx_t* ctx,
     if ((ctx->can_frame_len < 0) ||
         (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT))) {
         return -EBADMSG;
-    } else if (ctx->can_frame_len <= can_max_datalen(CAN_FORMAT)) {
+    } else if ((ctx->can_frame_len >= 0) &&
+               (ctx->can_frame_len <= can_max_datalen(CAN_FORMAT))) {
         // received up to 8 bytes --> CAN or CANFD frame
         // process as SF with no escape sequence
         return process_sf_no_esc(ctx, recv_buf_p, recv_buf_sz);
@@ -389,11 +362,10 @@ int receive_sf(isotp_ctx_t* ctx,
     }
 }
 
-int send_sf(isotp_ctx_t* ctx,
-            const uint8_t* send_buf_p,
-            const int send_buf_len,
-            const uint64_t timeout_us)
-{
+int prepare_sf(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len,
+               __attribute__((unused)) const uint64_t timeout_us) {
     if ((ctx == NULL) || (send_buf_p == NULL) ||
         (ctx->can_tx_f == NULL)) {
         return -EINVAL;
@@ -403,30 +375,28 @@ int send_sf(isotp_ctx_t* ctx,
         return -ERANGE;
     }
 
-    int rc = EOK;
-
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
     ctx->can_frame_len = 0;
 
     uint8_t* dp = NULL;
     ctx->total_datalen = 0;
-    ctx->remaining = 0;
+    ctx->remaining_datalen = 0;
 
     // prepare the SF header in the CAN frame
     switch (ctx->addressing_mode) {
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        if (send_buf_len <= 7) {
+        if ((send_buf_len >= 0) && (send_buf_len <= 7)) {
             // send as an SF with no escape sequence
             ctx->can_frame[0] = SF_PCI | (uint8_t)(send_buf_len & 0x00000007U);
             dp = &(ctx->can_frame[1]);
-            ctx->total_datalen += 1;
             ctx->can_frame_len += 1;
-        } else if (send_buf_len <= (can_max_datalen(ctx->can_format) - 2)) {
+        } else if ((send_buf_len >= 8) &&
+                   (send_buf_len <= (can_max_datalen(ctx->can_format) - 2)) &&
+                   (send_buf_len <= UINT8_MAX)) {
             ctx->can_frame[0] = SF_PCI;
             ctx->can_frame[1] = (uint8_t)(send_buf_len & 0x000000ffU);
             dp = &(ctx->can_frame[2]);
-            ctx->total_datalen += 2;
             ctx->can_frame_len += 2;
         } else {
             return -EOVERFLOW;
@@ -435,11 +405,13 @@ int send_sf(isotp_ctx_t* ctx,
 
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
-        if (send_buf_len <= 6) {
+        ctx->can_frame[0] = ctx->address_extension;
+        ctx->can_frame_len += 1;
+
+        if ((send_buf_len >= 0) && (send_buf_len <= 6)) {
             // send as an SF with no escape sequence
             ctx->can_frame[1] = SF_PCI | (uint8_t)(send_buf_len & 0x00000007U);
             dp = &(ctx->can_frame[2]);
-            ctx->total_datalen += 1;
             ctx->can_frame_len += 1;
         } else if (send_buf_len <= (can_max_datalen(ctx->can_format) - 3)) {
             // send as an SF with escape sequence
@@ -451,15 +423,6 @@ int send_sf(isotp_ctx_t* ctx,
         } else {
             return -EOVERFLOW;
         }
-
-        // add the address extension
-        rc = get_isotp_address_extension(ctx);
-        if (rc < 0) {
-            return rc;
-        }
-        ctx->can_frame[0] = (uint8_t)(rc & 0x000000ffU);
-        ctx->total_datalen += 1;
-        ctx->can_frame_len += 1;
         break;
 
     default:
@@ -470,14 +433,8 @@ int send_sf(isotp_ctx_t* ctx,
     // copy the payload data and pad the CAN frame (if needed)
     assert(dp != NULL);
     memcpy(dp, send_buf_p, send_buf_len);
-    ctx->total_datalen += send_buf_len;
     ctx->can_frame_len += send_buf_len;
     pad_can_frame(ctx->can_frame, ctx->can_frame_len, ctx->can_format);
 
-    rc = (*(ctx->can_tx_f))(ctx->can_ctx, ctx->can_frame, ctx->can_frame_len, timeout_us);
-
-    ctx->total_datalen = 0;
-    ctx->remaining = 0;
-
-    return rc;
+    return send_buf_len;
 }

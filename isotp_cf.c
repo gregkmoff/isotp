@@ -30,8 +30,8 @@
 #include <string.h>
 
 #include <can/can.h>
-#include "isotp.h"
-#include "isotp_private.h"
+#include <isotp.h>
+#include <isotp_private.h>
 
 #define CF_PCI (0x20)
 #define CF_SN_MASK (0x0f)
@@ -39,8 +39,7 @@
 
 int parse_cf(isotp_ctx_t* ctx,
              uint8_t* recv_buf_p,
-             const int recv_buf_sz)
-{
+             const int recv_buf_sz) {
     if ((ctx == NULL) ||
         (recv_buf_p == NULL)) {
         return -EINVAL;
@@ -80,7 +79,7 @@ int parse_cf(isotp_ctx_t* ctx,
         // advance the expected sequence number
         ctx->sequence_num++;
         ctx->sequence_num &= 0x0000000fU;
-        assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000fU));
+        assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000f));
     }
 
     // capture the address extension
@@ -105,8 +104,7 @@ int parse_cf(isotp_ctx_t* ctx,
 
 int prepare_cf(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
-               const int send_buf_len)
-{
+               const int send_buf_len) {
     if ((ctx == NULL) ||
         (send_buf_p == NULL)) {
         return -EINVAL;
@@ -140,7 +138,8 @@ int prepare_cf(isotp_ctx_t* ctx,
     }
 
     // setup the source and destination data pointers
-    const uint8_t* sp = &(send_buf_p[ctx->total_datalen - ctx->remaining_datalen]);
+    const uint8_t* sp = &(send_buf_p[ctx->total_datalen -
+                          ctx->remaining_datalen]);
     uint8_t* dp = &(ctx->can_frame[ae_l]);
 
     // setup the PCI with the SN
@@ -150,7 +149,7 @@ int prepare_cf(isotp_ctx_t* ctx,
     // advance the SN
     ctx->sequence_num++;
     ctx->sequence_num &= 0x0000000fU;
-    assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000fU));
+    assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000f));
 
     // copy the data
     int copy_len = MIN(can_max_datalen(ctx->can_format) - ctx->can_frame_len,
@@ -158,7 +157,9 @@ int prepare_cf(isotp_ctx_t* ctx,
     memcpy(dp, sp, copy_len);
     ctx->can_frame_len += copy_len;
 
-    int pad_rc = pad_can_frame_len(ctx->can_frame, ctx->can_frame_len, ctx->can_format);
+    int pad_rc = pad_can_frame_len(ctx->can_frame,
+                                   ctx->can_frame_len,
+                                   ctx->can_format);
     if (pad_rc < 0) {
         return pad_rc;
     }

@@ -23,94 +23,49 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "isotp.h"
-#include "isotp_private.h"
+#include <errno.h>
+#include <stdlib.h>
+
+#include <isotp.h>
+#include <isotp_private.h>
 
 int process_received_frame(isotp_ctx_t* ctx,
-                           uint8_t* recv_buf_p,
-                           const int recv_buf_len,
-                           const uint64_t timeout_us)
-{
+                           __attribute__((unused)) uint8_t* recv_buf_p,
+                           __attribute__((unused)) const int recv_buf_len,
+                           __attribute__((unused)) const uint64_t timeout_us) {
     if ((ctx == NULL) ||
         (recv_buf_p == NULL)) {
         return -EINVAL;
     }
 
-    // extract the PCI from the frame based on the addressing mode
-    uint8_t* pci = can_frame_data_ptr(ctx);
-    if (pci == NULL) {
-        return -EFAULT;
+    if ((ctx->address_extension_len < 0) ||
+        (ctx->address_extension_len > (ctx->can_frame_len + 1))) {
+        // address extension length is outside the CAN frame
+        return -ERANGE;
     }
 
-    switch (*pci & PCI_MASK) {
+    // extract the PCI from the frame based on the addressing mode
+    switch ((ctx->can_frame[ctx->address_extension_len + 1]) & PCI_MASK) {
     case SF_PCI:
-        return receive_sf(ctx, recv_buf_p, recv_buf_len, timeout_us);
+        // return receive_sf(ctx, recv_buf_p, recv_buf_len, timeout_us);
         break;
 
     case FF_PCI:
-        return recv_ff(ctx, recv_buf_p, recv_buf_len, timeout_us);
+        // return recv_ff(ctx, recv_buf_p, recv_buf_len, timeout_us);
         break;
 
     case CF_PCI:
-        return recv_cf(ctx, recv_buf_p, recv_buf_len, timeout_us);
+        // return recv_cf(ctx, recv_buf_p, recv_buf_len, timeout_us);
         break;
 
     case FC_PCI:
-        return recv_fc(ctx, recv_buf_p, recv_buf_len, timeout_us);
+        // return recv_fc(ctx, recv_buf_p, recv_buf_len, timeout_us);
         break;
 
     default:
         // the CAN frame doesn't contain an ISOTP message
-        return -EBADMSG;
-    }
-}
-
-uint8_t* can_frame_data_ptr(isotp_ctx_t* ctx)
-{
-    if (ctx == NULL) {
-        return NULL;
+        return -ENOMSG;
     }
 
-    switch (ctx->isotp_addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        return &(ctx->can_frame[0]);
-        break;
-
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        return &(ctx->can_frame[1]);
-        break;
-
-    case NULL_ISOTP_ADDRESSING_MODE:
-    case LAST_ISOTP_ADDRESSING_MODE:
-    default:
-        // invalid addressing mode
-        return NULL;
-    }
-}
-
-int can_frame_len(const isotp_ctx_t* ctx)
-{
-    if (ctx == NULL) {
-        return -EINVAL;
-    }
-
-    switch (ctx->isotp_addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        return ctx->can_frame_len;
-        break;
-
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        return ctx->can_frame_len - 1;
-        break;
-
-    case NULL_ISOTP_ADDRESSING_MODE:
-    case LAST_ISOTP_ADDRESSING_MODE:
-    default:
-        // invalid addressing mode
-        return -EFAULT;
-    }
+    return -EBADMSG;
 }

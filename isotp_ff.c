@@ -29,8 +29,8 @@
 #include <string.h>
 
 #include <can/can.h>
-#include "isotp.h"
-#include "isotp_private.h"
+#include <isotp.h>
+#include <isotp_private.h>
 
 #define PCI_MASK (0xf0)
 #define FF_PCI (0x10)
@@ -41,19 +41,20 @@
 /**
  * @ref ISO-15765-2:2016, table 14
  */
-static int FF_DLmin(const isotp_ctx_t* ctx)
-{
+static int FF_DLmin(const isotp_ctx_t* ctx) {
     if (ctx == NULL) {
         return -EINVAL;
     }
 
     switch (ctx->can_format) {
     case CAN_FORMAT:
-        return (can_max_datalen(ctx->can_format) - ctx->address_extension_len);
+        return (can_max_datalen(ctx->can_format) -
+                ctx->address_extension_len);
         break;
 
     case CANFD_FORMAT:
-        return (can_max_datalen(ctx->can_format) - (ctx->address_extension_len + 1));
+        return (can_max_datalen(ctx->can_format) -
+                (ctx->address_extension_len + 1));
         break;
 
     default:
@@ -63,8 +64,7 @@ static int FF_DLmin(const isotp_ctx_t* ctx)
 
 int parse_ff(isotp_ctx_t* ctx,
              uint8_t* recv_buf_p,
-             const int recv_buf_sz)
-{
+             const int recv_buf_sz) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
         return -EINVAL;
     }
@@ -142,8 +142,9 @@ int parse_ff(isotp_ctx_t* ctx,
     return copy_len;
 }
 
-static int prepare_ff_no_esc(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const int send_buf_len)
-{
+static int prepare_ff_no_esc(isotp_ctx_t* ctx,
+                             const uint8_t* send_buf_p,
+                             const int send_buf_len) {
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
     ctx->can_frame_len = 0;
 
@@ -177,8 +178,9 @@ static int prepare_ff_no_esc(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const 
     return copy_len;
 }
 
-static int prepare_ff_with_esc(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const int send_buf_len)
-{
+static int prepare_ff_with_esc(isotp_ctx_t* ctx,
+                               const uint8_t* send_buf_p,
+                               const int send_buf_len) {
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
     ctx->can_frame_len = 0;
 
@@ -228,8 +230,7 @@ static int prepare_ff_with_esc(isotp_ctx_t* ctx, const uint8_t* send_buf_p, cons
 
 int prepare_ff(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
-               const int send_buf_len)
-{
+               const int send_buf_len) {
     if ((ctx == NULL) || (send_buf_p == NULL)) {
         return -EINVAL;
     }

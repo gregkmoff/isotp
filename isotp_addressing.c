@@ -24,42 +24,14 @@
  */
 
 #include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
 
-#include "isotp.h"
-#include "isotp_private.h"
+#include <isotp.h>
+#include <isotp_private.h>
 
-uint8_t* frame_data_ptr(isotp_ctx_t* ctx)
-{
-    if (ctx == NULL) {
-        return NULL;
-    }
-
-    int ae_l = address_extension_len(ctx->addressing_mode);
-    if (ae_l < 0) {
-        return ae_l;
-    }
-
-    assert(ae_l < sizeof(ctx->can_frame));
-    return (ctx->can_frame + ae_l);
-}
-
-int frame_datalen(const isotp_ctx_t* ctx)
-{
-    if (ctx == NULL) {
-        return -EINVAL;
-    }
-
-    int ae_l = address_extension_len(ctx->addressing_mode);
-    if (ae_l < 0) {
-        return ae_l;
-    }
-
-    assert(ctx->can_frame_len >= ae_l);
-    return ctx->can_frame_len - ae_l;
-}
-
-int max_datalen(const isotp_addressing_mode_t addr_mode, const can_format_t can_format)
-{
+int max_datalen(const isotp_addressing_mode_t addr_mode,
+                const can_format_t can_format) {
     int can_dl = can_max_datalen(can_format);
     if (can_dl < 0) {
         return can_dl;
@@ -74,8 +46,7 @@ int max_datalen(const isotp_addressing_mode_t addr_mode, const can_format_t can_
     return can_dl - ae_l;
 }
 
-int address_extension_len(const isotp_addressing_mode_t addr_mode)
-{
+int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     switch (addr_mode) {
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:

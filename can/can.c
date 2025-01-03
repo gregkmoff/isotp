@@ -21,7 +21,7 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include <assert.h>
 #include <errno.h>
@@ -31,11 +31,11 @@
 #include <string.h>
 #include <sys/param.h>
 
-#include "can.h"
+#include "can/can.h"
 
 #ifndef EOK
 #define EOK (0)
-#endif // EOK
+#endif  // EOK
 
 #define CAN_MAX_DATALEN (8)
 #define CANFD_MAX_DATALEN (64)
@@ -45,29 +45,20 @@
 #define CAN_MAX_DLC (8)
 #define CANFD_MAX_DLC (15)
 
-#ifdef UNIT_TESTING
-extern void mock_assert(const int result, const char* const expression,
-                        const char * const file, const int line);
- 
-#undef assert
-#define assert(expression) \
-    mock_assert((int)(expression), #expression, __FILE__, __LINE__);
-#endif // UNIT_TESTING
-
 #ifndef MAX
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#endif // MAX
+#endif  // MAX
 
 #ifndef NUM_ENTRIES
 #define NUM_ENTRIES(x) (sizeof(x) / sizeof((x)[0]))
-#endif // NUM_ENTRIES
+#endif  // NUM_ENTRIES
 
 static const int CAN_dlc_to_datalen[CAN_MAX_DLC + 1] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 _Static_assert(NUM_ENTRIES(CAN_dlc_to_datalen) == (CAN_MAX_DLC + 1),
                "CAN DLC to DATALEN size mismatch");
 
-static const int CANFD_dlc_to_datalen[CANFD_MAX_DLC + 1] = 
+static const int CANFD_dlc_to_datalen[CANFD_MAX_DLC + 1] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64 };
 _Static_assert(NUM_ENTRIES(CANFD_dlc_to_datalen) == (CANFD_MAX_DLC + 1),
                "CANFD DLC to DATALEN size mismatch");
@@ -82,8 +73,7 @@ static const int CAN_datalen_to_dlc[CAN_MAX_DATALEN + 1] =
 _Static_assert(NUM_ENTRIES(CAN_datalen_to_dlc) == (CAN_MAX_DATALEN + 1),
                "CAN DATALEN to DLC size mismatch");
 
-static const int CANFD_datalen_to_dlc[CANFD_MAX_DATALEN + 1] =
-    {
+static const int CANFD_datalen_to_dlc[CANFD_MAX_DATALEN + 1] = {
         // 0-8
         0, 1, 2, 3, 4, 5, 6, 7, 8,
         // 9-12
@@ -138,7 +128,10 @@ int zero_can_frame(uint8_t* buf, const can_format_t format) {
     return EOK;
 }
 
-static int pad_can_frame_internal(uint8_t* buf, const int buf_len, const can_format_t format, int* dlc) {
+static int pad_can_frame_internal(uint8_t* buf,
+                                  const int buf_len,
+                                  const can_format_t format,
+                                  int* dlc) {
     if ((buf == NULL) ||
         (dlc == NULL) ||
         !valid_can_format(format) ||
@@ -181,7 +174,9 @@ int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
     }
 }
 
-int pad_can_frame_len(uint8_t* buf, const int buf_len, const can_format_t format) {
+int pad_can_frame_len(uint8_t* buf,
+                      const int buf_len,
+                      const can_format_t format) {
     int dlc = 0;
     int rc = pad_can_frame_internal(buf, buf_len, format, &dlc);
 
