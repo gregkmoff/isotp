@@ -136,25 +136,6 @@ int receive_sf(isotp_ctx_t* ctx,
                const uint64_t timeout_us __attribute__((unused)));
 
 /**
- * @brief prepare an ISOTP SF CAN frame from the provided buffer
- *
- * Process the provided buffer into an ISOTP SF and copy to the
- * tx_frame in the ISOTP context.
- *
- * @param ctx - ISOTP context
- * @param send_buf_p - pre-allocated buffer to copy payload from into the SF
- * @param send_buf_len - size of the payload in the buffer to send
- *                       has to fit into an SF
- * @returns
- * on success (>=0), number of payload bytes copied into the CAN frame
- * otherwise (<0), error code indicating the failure
- */
-int send_sf(isotp_ctx_t* ctx,
-            const uint8_t* send_buf_p,
-            const int send_buf_len,
-            const uint64_t timeout_us __attribute__((unused)));
-
-/**
  * @brief prepare an ISOTP Flow Control (FC) CAN frame
  *
  * Create an ISOTP FC CAN frame and copy to the can_frame in the ISOTP context.
@@ -190,6 +171,48 @@ int parse_ff(isotp_ctx_t* ctx,
 int prepare_ff(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len);
+
+/**
+ * @brief prepare a CAN frame as an ISOTP SF and copy the data to be sent
+ *
+ * @param ctx - pointer to the ISOTP context containing the CAN frame
+ * @param send_buf_p - pointer to the data to be sent and copied into the SF
+ * @param send_buf_len - amount of data to be sent
+ * @returns
+ * on success, the number of bytes added to the SF (should be equal to
+ *             the send_buf_len parameter)
+ * otherwise,
+ *     -EINVAL = a parameter is invalid
+ *     -ERANGE = the send_buf_len is an invalid value
+ *     -EOVERFLOW = the send_buf_len is too big for the CAN frame
+ *     -EFAULT = something within the context is faulty
+ *     <0 = other error
+ *     If any error occurs the update parameters are all invalid
+ */
+int prepare_sf(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len);
+
+/**
+ * @brief parse a CAN frame as an ISOTP SF and extract the data
+ *
+ * @param ctx - pointer to the ISOTP context containing the CAN frame
+ * @param recv_buf_p - where to write the data within the SF
+ * @param recv_buf_sz - size of the buffer to write the data to
+ *
+ * @returns
+ * on success, length of the received data written to the buffer
+ * otherwise,
+ *     -EINVAL = a parameter is invalid
+ *     -ERANGE = the recv_buf_sz is not a supported or valid value
+ *     -EBADMSG = the CAN frame does not contain an ISOTP SF
+ *     -ENOTSUP = the ISOTP SF is not a supported format
+ *     <0 = other error
+ *     If any error occurs the update parameters are all invalid
+ */
+int parse_sf(isotp_ctx_t* ctx,
+             uint8_t* recv_buf_p,
+             const int recv_buf_sz);
 
 /**
  * @brief parse a CAN frame as an ISOTP FC and extract the relevant flow control parameters

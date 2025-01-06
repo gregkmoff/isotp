@@ -324,8 +324,7 @@ static int process_sf_with_esc(isotp_ctx_t* ctx,
 
 int parse_sf(isotp_ctx_t* ctx,
              uint8_t* recv_buf_p,
-             const int recv_buf_sz,
-             const uint64_t timeout_us __attribute__((unused))) {
+             const int recv_buf_sz) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
         return -EINVAL;
     }
@@ -364,10 +363,8 @@ int parse_sf(isotp_ctx_t* ctx,
 
 int prepare_sf(isotp_ctx_t* ctx,
                const uint8_t* send_buf_p,
-               const int send_buf_len,
-               __attribute__((unused)) const uint64_t timeout_us) {
-    if ((ctx == NULL) || (send_buf_p == NULL) ||
-        (ctx->can_tx_f == NULL)) {
+               const int send_buf_len) {
+    if ((ctx == NULL) || (send_buf_p == NULL)) {
         return -EINVAL;
     }
 
