@@ -58,6 +58,7 @@ LINT = cpplint
 BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
+REV=$(git rev-parse --short HEAD)
 
 default: all
 
@@ -79,7 +80,10 @@ can/%.o : can/%.c | can/%.lint
 
 lib: $(OBJS)
 	@echo "Linking libisotp.so..."
-	@$(CC) -shared -o ${BUILD_DIR}/libisotp.so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
+	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
+	@echo "...generating version $(GIT_TAG)"
+	@$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
+	@ln -s libisotp.$(GIT_TAG).so ${BUILD_DIR}/libisotp.so
 
 .PHONY : clean all lib
 
