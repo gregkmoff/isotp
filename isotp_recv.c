@@ -24,48 +24,123 @@
  */
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include <isotp.h>
 #include <isotp_private.h>
 
-int process_received_frame(isotp_ctx_t* ctx,
-                           __attribute__((unused)) uint8_t* recv_buf_p,
-                           __attribute__((unused)) const int recv_buf_len,
-                           __attribute__((unused)) const uint64_t timeout_us) {
-    if ((ctx == NULL) ||
-        (recv_buf_p == NULL)) {
+static int recv_cfs(isotp_ctx_t* ctx,
+                    uint8_t* recv_buf_p,
+                    const int recv_buf_sz,
+                    const uint8_t blocksize,
+                    const int stmin_usec,
+                    const uint64_t timeout) {
+    int rc = EOK;
+    while (ctx->remaining_datalen > 0) {
+        rc = prepare_fc(ctx,
+                        ISOTP_FC_FLOWSTATUS_CTS,
+                        blocksize,
+                        stmin_usec);
+        if (rc < 0) {
+            return rc;
+        }
+
+        rc = (*(ctx->can_tx_f))(ctx->can_ctx,
+                                ctx->can_frame,
+                                ctx->can_frame_len,
+                                timeout);
+        if (rc < 0) {
+            return rc;
+        }
+
+        uint8_t bs = blocksize;
+
+        while ((ctx->remaining_datalen > 0) &&
+               ((blocksize == 0) || (bs > 0))) {
+            rc = (*(ctx->can_rx_f))(ctx->can_ctx,
+                                    ctx->can_frame,
+                                    sizeof(ctx->can_frame),
+                                    timeout);
+            if (rc < 0) {
+                return rc;
+            }
+
+            // make sure the CAN frame contains a CF
+            // this will also validate the sequence number
+            // and update the remaining_datalen
+            rc = parse_cf(ctx, recv_buf_p, recv_buf_sz);
+            if (rc < 0) {
+                return rc;
+            }
+
+            if (bs > 0) {
+                bs--;
+            }
+        }
+    }
+
+    return rc;
+}
+
+int isotp_recv(isotp_ctx_t* ctx,
+               uint8_t* recv_buf_p,
+               const int recv_buf_sz,
+               const uint8_t blocksize,
+               const int stmin_usec,
+               const uint64_t timeout) {
+    if ((ctx == NULL) || (recv_buf_p == NULL)) {
         return -EINVAL;
     }
 
-    if ((ctx->address_extension_len < 0) ||
-        (ctx->address_extension_len > (ctx->can_frame_len + 1))) {
-        // address extension length is outside the CAN frame
+    if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
         return -ERANGE;
     }
 
-    // extract the PCI from the frame based on the addressing mode
-    switch ((ctx->can_frame[ctx->address_extension_len + 1]) & PCI_MASK) {
-    case SF_PCI:
-        // return receive_sf(ctx, recv_buf_p, recv_buf_len, timeout_us);
-        break;
+    int rc = 0;
+    ctx->total_datalen = 0;
+    ctx->remaining_datalen = 0;
 
-    case FF_PCI:
-        // return recv_ff(ctx, recv_buf_p, recv_buf_len, timeout_us);
-        break;
-
-    case CF_PCI:
-        // return recv_cf(ctx, recv_buf_p, recv_buf_len, timeout_us);
-        break;
-
-    case FC_PCI:
-        // return recv_fc(ctx, recv_buf_p, recv_buf_len, timeout_us);
-        break;
-
-    default:
-        // the CAN frame doesn't contain an ISOTP message
-        return -ENOMSG;
+    rc = (*(ctx->can_rx_f))(ctx->can_ctx,
+                            ctx->can_frame,
+                            sizeof(ctx->can_frame),
+                            timeout);
+    if (rc < 0) {
+        return rc;
     }
 
-    return -EBADMSG;
+    switch ((ctx->can_frame[ctx->address_extension_len + 1]) & PCI_MASK) {
+        case SF_PCI:
+            rc = parse_sf(ctx, recv_buf_p, recv_buf_sz);
+            break;
+
+        case FF_PCI:
+            rc = parse_ff(ctx, recv_buf_p, recv_buf_sz);
+            if (rc < 0) {
+                return rc;
+            }
+
+            rc = recv_cfs(ctx,
+                          recv_buf_p,
+                          recv_buf_sz,
+                          blocksize,
+                          stmin_usec,
+                          timeout);
+            break;
+
+        case CF_PCI:
+        case FC_PCI:
+        default:
+            return -ENOMSG;
+            break;
+    }
+
+    if (rc < 0) {
+        return rc;
+    } else {
+        rc = ctx->total_datalen;
+        ctx->total_datalen = 0;
+        ctx->remaining_datalen = 0;
+        return rc;
+    }
 }

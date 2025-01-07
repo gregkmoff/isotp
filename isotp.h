@@ -178,7 +178,10 @@ int isotp_send(isotp_ctx_t* ctx,
  * @param ctx - ISOTP context
  * @param recv_buf_p - pointer to the buffer where to write the received data
  * @param recv_buf_sz - size of the receive buffer
- * @param timeout - timeout during receiving, in usec
+ * @param blocksize - number of blocks to receive at a time, between flow control
+ *                    0 means to send all blocks at once
+ * @param stmin_usec - gap between blocks, in microseconds
+ * @param timeout - timeout during receiving, in microseconds
  *
  * @returns
  * on success (>=0) - number of bytes received
@@ -187,6 +190,8 @@ int isotp_send(isotp_ctx_t* ctx,
 int isotp_recv(isotp_ctx_t* ctx,
                uint8_t* recv_buf_p,
                const int recv_buf_sz,
+               const uint8_t blocksize,
+               const int stmin_usec,
                const uint64_t timeout);
 
 /**
