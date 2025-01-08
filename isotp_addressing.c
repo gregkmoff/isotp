@@ -23,8 +23,47 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 
 #include <isotp.h>
 #include <isotp_private.h>
+
+int max_datalen(const isotp_addressing_mode_t addr_mode,
+                const can_format_t can_format) {
+    int can_dl = can_max_datalen(can_format);
+    if (can_dl < 0) {
+        return can_dl;
+    }
+
+    int ae_l = address_extension_len(addr_mode);
+    if (ae_l < 0) {
+        return ae_l;
+    }
+
+    assert(can_dl > ae_l);
+    return can_dl - ae_l;
+}
+
+int address_extension_len(const isotp_addressing_mode_t addr_mode) {
+    switch (addr_mode) {
+    case ISOTP_NORMAL_ADDRESSING_MODE:
+    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
+        // no address extension byte
+        return 0;
+        break;
+
+    case ISOTP_EXTENDED_ADDRESSING_MODE:
+    case ISOTP_MIXED_ADDRESSING_MODE:
+        // one leading address extension byte
+        return 1;
+        break;
+
+    case NULL_ISOTP_ADDRESSING_MODE:
+    case LAST_ISOTP_ADDRESSING_MODE:
+    default:
+        // invalid addressing mode
+        return -EFAULT;
+    }
+}

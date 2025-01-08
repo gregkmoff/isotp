@@ -1,9 +1,36 @@
-#include <assert.h>
-#include <stdbool.h>
+/**
+ * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
-#include "can.h"
-#include "isotp.h"
-#include "isotp_private.h"
+#include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <can/can.h>
+#include <isotp.h>
+#include <isotp_private.h>
 
 #define PCI_MASK (0xf0)
 #define FF_PCI (0x10)
@@ -11,242 +38,215 @@
 
 #define FF_DL_MAX_NO_ESC (4095)
 
-// ref ISO-15765-2:2016, table 14
-static bool FF_DLmin(const isotp_ctx_t* ctx, uint8_t* tx_dl) {
-    assert(ctx != NULL);
+/**
+ * @ref ISO-15765-2:2016, table 14
+ */
+static int FF_DLmin(const isotp_ctx_t* ctx) {
+    if (ctx == NULL) {
+        return -EINVAL;
+    }
 
-    bool rc = false;
-
-    switch (ctx->addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        *tx_dl = can_max_datalen(ctx->can_format);  // will assert if can_format invalid
-        if (*tx_dl == 8) {
-            rc = true;
-        } else if (*tx_dl > 8) {
-            *tx_dl = *tx_dl - 1;
-            rc = true;
-        } else {
-            assert(*tx_dl >= 8);
-            rc = false;
-        }
+    switch (ctx->can_format) {
+    case CAN_FORMAT:
+        return (can_max_datalen(ctx->can_format) -
+                ctx->address_extension_len);
         break;
 
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        *tx_dl = can_max_datalen(ctx->can_format);  // will assert if can_format invalid
-        if (*tx_dl == 8) {
-            *tx_dl = 7;
-            rc = true;
-        } else if (tx_dl > 8) {
-            *tx_dl = *tx_dl - 2;
-            rc = true;
-        } else {
-            assert(tx_dl >= 8);
-            rc = false;
-        }
+    case CANFD_FORMAT:
+        return (can_max_datalen(ctx->can_format) -
+                (ctx->address_extension_len + 1));
         break;
 
     default:
-        assert(0);
-        rc = false;
-        break;
+        return -EFAULT;
     }
-
-    return rc;
 }
 
-static isotp_rc_t receive_ff_esc(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv_buf_sz) {
-    assert(ctx != NULL);
-    assert(recv_buf_p != NULL);
-    assert(recv_buf_sz > 0);
-
-    uint32_t ff_dl = 0;
-    uint8_t* dp = NULL;
-    uint32_t copy_len = ctx->rx_frame->datalen;
-
-    switch (ctx->addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        assert(ctx->rx_frame->data[0] == FF_PCI);
-        assert(ctx->rx_frame->data[1] == 0x00);
-        dp = &(ctx->rx_frame->data[2]);
-        copy_len -= 3;
-
-        // check the FF_DL
-        // ref ISO-15765-2:2016, table 15 clause 1 and 3
-        if (
-        // TODO: implement ff_dl_min checking
-        //ff_dl_min = MIN(CAN_FRAME_PAYLOAD_LEN,
-        break;
-
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        assert(ctx->rx_frame->data[1] == FF_PCI);
-        assert(ctx->rx_frame->data[2] == 0x00);
-        ctx->address_extension = ctx->rx_frame->data[0];
-        dp = &(ctx->rx_frame->data[3]);
-        copy_len -= 4;
-        break;
-
-    default:
-        assert(0);
-        return ISOTP_RC_ERROR;
-        break;
+int parse_ff(isotp_ctx_t* ctx,
+             uint8_t* recv_buf_p,
+             const int recv_buf_sz) {
+    if ((ctx == NULL) || (recv_buf_p == NULL)) {
+        return -EINVAL;
     }
 
-    // calculate the total ff_dl
-    ff_dl = ((*dp) << 24);
-    dp++;
-    ff_dl += ((*dp) << 16);
-    dp++;
-    ff_dl += ((*dp) << 8);
-    dp++;
-    ff_dl += (*dp);
-    dp++;
+    if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
+        return -ERANGE;
+    }
 
+    uint8_t* sp = ctx->can_frame;
+
+    if (ctx->address_extension_len > 0) {
+        ctx->address_extension = *sp;
+        sp++;
+        (ctx->can_frame_len)--;
+    }
+
+    // make sure this is an FF_PCI
+    if ((*sp & PCI_MASK) != FF_PCI) {
+        return -EBADMSG;
+    }
+
+    // get the FF_DL
+    int ff_dl = 0;
+    ff_dl = (int)(*sp & 0x0fU) << 8;
+    sp++;
+    (ctx->can_frame_len)--;
+    ff_dl += (int)(*sp);
+    sp++;
+    (ctx->can_frame_len)--;
+
+    if (ff_dl == 0) {
+        // FF has the escape == this is an FF with DL >= 4096
+        // extract the next four bytes to get the FF_DL
+        ff_dl = (int)(*sp) << 24;
+        sp++;
+        (ctx->can_frame_len)--;
+        ff_dl += (int)(*sp) << 16;
+        sp++;
+        (ctx->can_frame_len)--;
+        ff_dl += (int)(*sp) << 8;
+        sp++;
+        (ctx->can_frame_len)--;
+        ff_dl += (int)(*sp);
+        sp++;
+        (ctx->can_frame_len)--;
+    }
+
+    // check the incoming FF_DL
+
+    // verify the FF_DL >= FF_DLmin
+    int ff_dlmin = FF_DLmin(ctx);
+    if (ff_dlmin < 0) {
+        return ff_dlmin;
+    }
+    if (ff_dl < ff_dlmin) {
+        // ignore this frame
+        // @ref ISO-15765-2:2016, section 9.6.3.2
+        return -EBADMSG;
+    }
+
+    // verify that we have space to receive all the data
     if (ff_dl > recv_buf_sz) {
-        zero_can_frame(ctx->rx_frame);
-        return ISOTP_RC_BUFFER_OVERFLOW;
+        // we need to send back an FC with OVFLW set
+        return -EOVERFLOW;
     }
 
-    assert(ff_dl > copy_len);
-    assert(ctx->rx_frame->datalen > copy_len);
-    ctx->total_remaining = ff_dl - copy_len;
+    // copy the data into the receive buffer
+    int copy_len = MIN(ctx->can_frame_len, ff_dl);
+    memcpy(recv_buf_p, sp, copy_len);
+
     ctx->total_datalen = ff_dl;
-    memcpy(recv_buf_p, dp, copy_len);
-    zero_can_frame(ctx->rx_frame);
+    ctx->remaining_datalen = ff_dl - copy_len;
+    ctx->sequence_num = 1;  // next CF should have SN=1
 
-    return ISOTP_RC_OK;
+    return copy_len;
 }
 
-// FF with FF_DL <= 4095
-static isotp_rc_t receive_ff_no_esc(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv_buf_sz) {
-    assert(ctx != NULL);
-    assert(recv_buf_p != NULL);
-    assert(recv_buf_sz > 0);
+static int prepare_ff_no_esc(isotp_ctx_t* ctx,
+                             const uint8_t* send_buf_p,
+                             const int send_buf_len) {
+    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    ctx->can_frame_len = 0;
 
-    uint32_t ff_dl = 0;
-    uint8_t* dp = NULL;
-    uint8_t copy_len = ctx->rx_frame->datalen;
-    uint8_t ff_dlmin = 0;
+    uint8_t* dp = ctx->can_frame;
 
-    assert(FF_DLmin(ctx, &ff_dlmin));
-
-    switch (ctx->addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        assert((ctx->rx_frame->data[0] & PCI_MASK) == FF_PCI);
-        ff_dl = (ctx->rx_frame->data[0] & FF_DL_PCI_MASK) << 8;
-        ff_dl += ctx->rx_frame->data[1];
-        dp = &(ctx->rx_frame->data[2]);
-        copy_len -= 2;  // PCI, FF_DL
-        break;
-
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        assert((ctx->rx_frame->data[1] & PCI_MASK) == FF_PCI);
-        ctx->address_extension = ctx->rx_frame->data[0];
-        ff_dl = (ctx->rx_frame->data[1] & FF_DL_PCI_MASK) << 8;
-        ff_dl += ctx->rx_frame->data[2];
-        dp = &(ctx->rx_frame->data[3]);
-        copy_len -= 3;  // AE, PCI, FF_DL
-        break;
-
-    default:
-        assert(0);
-        return ISOTP_RC_INVALID_ADDRESSING_MODE;
-        break;
+    // add the address extension, if any
+    if (ctx->address_extension_len > 0) {
+        (*dp) = ctx->address_extension;
+        dp++;
+        (ctx->can_frame_len)++;
     }
 
-    // check the FF_DL
-    // ref ISO-15765-2:2016, table 15 clauses 1 and 2
-    if (ff_dl <= (ff_dlmin - 1)) {
-        // invalid
-        return ISOTP_RC_IGNORE;
-    } else if (ff_dl > 4095) {
-        // invalid
-        return ISOTP_RC_IGNORE;
-    } else if (ff_dl > recv_buf_sz) {
-        // too big for the receive buffer
-        return ISOTP_RC_BUFFER_OVERFLOW;
+    // add the PCI and total length byte
+    (*dp) = (FF_PCI) | (uint8_t)((send_buf_len >> 8) & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+    (*dp) = (uint8_t)(send_buf_len & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+
+    // start copying the data
+    int copy_len = can_max_datalen(ctx->can_format) - ctx->can_frame_len;
+
+    ctx->total_datalen = send_buf_len;
+    memcpy(dp, send_buf_p, copy_len);
+    ctx->remaining_datalen = ctx->total_datalen - copy_len;
+
+    ctx->sequence_num = 1;  // FF=0, expect first CF with SN=1
+    ctx->can_frame_len += copy_len;
+
+    return copy_len;
+}
+
+static int prepare_ff_with_esc(isotp_ctx_t* ctx,
+                               const uint8_t* send_buf_p,
+                               const int send_buf_len) {
+    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    ctx->can_frame_len = 0;
+
+    uint8_t* dp = ctx->can_frame;
+
+    // add the address extension, if any
+    if (ctx->address_extension_len > 0) {
+        (*dp) = ctx->address_extension;
+        dp++;
+        (ctx->can_frame_len)++;
+    }
+
+    // add the PCI and the escape byte
+    (*dp) = FF_PCI;
+    dp++;
+    (ctx->can_frame_len)++;
+    (*dp) = 0;
+    dp++;
+    (ctx->can_frame_len)++;
+
+    // add the 4-byte total length
+    (*dp) = (uint8_t)((send_buf_len >> 24) & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+    (*dp) = (uint8_t)((send_buf_len >> 16) & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+    (*dp) = (uint8_t)((send_buf_len >> 8) & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+    (*dp) = (uint8_t)(send_buf_len & 0x000000ffU);
+    dp++;
+    (ctx->can_frame_len)++;
+
+    // start copying the data
+    int copy_len = can_max_datalen(ctx->can_format) - ctx->can_frame_len;
+
+    ctx->total_datalen = send_buf_len;
+    memcpy(dp, send_buf_p, copy_len);
+    ctx->remaining_datalen = ctx->total_datalen - copy_len;
+
+    ctx->sequence_num = 1;  // FF=0, expect first CF with SN=1
+    ctx->can_frame_len += copy_len;
+
+    return copy_len;
+}
+
+int prepare_ff(isotp_ctx_t* ctx,
+               const uint8_t* send_buf_p,
+               const int send_buf_len) {
+    if ((ctx == NULL) || (send_buf_p == NULL)) {
+        return -EINVAL;
+    }
+
+    // make sure the sending size is at least FF_DLmin
+    // @ref ISO-15765-2:2016, section 9.6.3.1
+    int ff_dlmin = FF_DLmin(ctx);
+    if (ff_dlmin < 0) {
+        return ff_dlmin;
+    }
+
+    if ((send_buf_len >= ff_dlmin) && (send_buf_len <= 4095)) {
+        return prepare_ff_no_esc(ctx, send_buf_p, send_buf_len);
+    } else if ((send_buf_len >= 4096) && (send_buf_len <= MAX_TX_DATALEN)) {
+        return prepare_ff_with_esc(ctx, send_buf_p, send_buf_len);
     } else {
-        // valid
-    }
-
-    assert(ff_dl > copy_len);
-    assert(ctx->rx_frame->datalen > copy_len);
-    ctx->total_remaining = ff_dl - copy_len;
-    ctx->total_datalen = ff_dl;
-    memcpy(recv_buf_p, dp, ctx->rx_frame->datalen - copy_len);
-
-    return ISOTP_RC_RECEIVE;
-}
-
-isotp_rc_t receive_ff(isotp_ctx_t* ctx, uint8_t* recv_buf_p, const uint32_t recv_buf_sz) {
-    assert(ctx != NULL);
-    assert(recv_buf_p != NULL);
-    assert(recv_buf_sz > 0);
-
-    switch (ctx->addressing_mode) {
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-        if ((ctx->rx_frame->data[0] & PCI_MASK) != FF_PCI) {
-            return ISOTP_RC_RECEIVE;
-        }
-        if ((ctx->rx_frame->data[0] == FF_PCI) && (ctx->rx_frame->data[1] == 0x00)) {
-            return receive_ff_esc(ctx, recv_buf_p, recv_buf_sz);
-        } else {
-            return receive_ff_no_esc(ctx, recv_buf_p, recv_buf_sz);
-        }
-        break;
-
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        if ((ctx->rx_frame->data[1] & PCI_MASK) != FF_PCI) {
-            return ISOTP_RC_RECEIVE;
-        }
-        if ((ctx->rx_frame->data[1] == FF_PCI) && (ctx->rx_frame->data[2] == 0x00)) {
-            return receive_ff_esc(ctx, recv_buf_p, recv_buf_sz);
-        } else {
-            return receive_ff_no_esc(ctx, recv_buf_p, recv_buf_sz);
-        }
-        break;
-
-    default:
-        assert(0);
-        return ISOTP_RC_INVALID_ADDRESSING_MODE;
-        break;
-    }
-
-    if (rc == ISOTP_RC_OKAY) {
-        // transmit the FC and go into a receiving state
-        rc = transmit_fc(ctx, ISOTP_FC_FS_CTS, ctx->blocksize, ctx->st_min);
-    }
-
-    return rc;
-}
-
-
-static isotp_rc_t transmit_ff_no_esc(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32_t send_buf_len) {
-    assert(ctx != NULL);
-    assert(send_buf_p != NULL);
-    assert(send_buf_len <= FF_DL_MAX_NO_ESC);
-
-isotp_rc_t transmit_ff(isotp_ctx_t* ctx, const uint8_t* send_buf_p, const uint32_t send_buf_len) {
-    assert(ctx != NULL);
-    assert(send_buf_p != NULL);
-
-    uint8_t ff_dlmin = 0;
-    assert(FF_DLmin(ctx, &ff_dlmin));
-
-    if (send_buf_len <= (ff_dlmin - 1)) {
-        return ISOTP_RC_INVALID_LEN;
-    } else if ((send_buf_len >= ff_dlmin) && (send_buf_len <= FF_DL_MAX_NO_ESC)) {
-        return transmit_ff_no_esc(ctx, send_buf_p, send_buf_len);
-    } else if ((send_buf_len >= FF_DL_MIN_ESC) && (send_buf_len <= UINT32_MAX)) {
-        return transmit_ff_esc(ctx, send_buf_p, send_buf_len);
-    } else {
-        return ISOTP_RC_INVALID_LEN;
+        return -ERANGE;
     }
 }
