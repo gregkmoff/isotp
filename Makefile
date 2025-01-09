@@ -51,6 +51,7 @@ LINTS = isotp.lint \
 	isotp_send.lint \
 	isotp_sf.lint \
 	can/can.lint
+UNIT_TESTS = can/can_ut.c
 
 CC = gcc
 CFLAGS += -c -I. -W -Wall -Werror -fPIC
@@ -59,6 +60,7 @@ BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
 REV=$(git rev-parse --short HEAD)
+CMOCKA_FLAGS=$(pkg-config --cflags --libs cmocka)
 
 default: all
 
@@ -70,22 +72,35 @@ setup:
 	@mkdir -p ${LINT_DIR}/can
 
 %.o : %.c | %.lint
-	@$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
+	$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
 
 can/%.o : can/%.c | can/%.lint
-	@$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
+	$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
 
 %.lint : %.c
-	@$(LINT) --filter=-readability/casting $< > ${LINT_DIR}/$@
+	$(LINT) --filter=-readability/casting $< > ${LINT_DIR}/$@
 
 lib: $(OBJS)
 	@echo "Linking libisotp.so..."
 	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
 	@echo "...generating version $(GIT_TAG)"
-	@$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
+	$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
 	@ln -s libisotp.$(GIT_TAG).so ${BUILD_DIR}/libisotp.so
 
-.PHONY : clean all lib
+.PHONY : clean all lib test
 
 clean :
 	@rm -rf ${BUILD_DIR}
+
+test: $(UNIT_TESTS) $(OBJS)
+	@$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
+	@$(CC) -I. -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
+	${BUILD_DIR}/can_ut
+	@$(CC) -I. -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
+	${BUILD_DIR}/isotp_cf_ut
+	@$(CC) -I. -o ${BUILD_DIR}/isotp_fc_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c
+	${BUILD_DIR}/isotp_fc_ut
+	@$(CC) -I. -o ${BUILD_DIR}/isotp_ff_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c
+	${BUILD_DIR}/isotp_ff_ut
+	@$(CC) -I. -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
+	${BUILD_DIR}/isotp_sf_ut
