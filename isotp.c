@@ -44,18 +44,23 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
         return -EINVAL;
     }
 
-    memset(ctx, 0, sizeof(*ctx));
+    *ctx = calloc(1, sizeof(**ctx));
+    if (*ctx == NULL) {
+        return -ENOMEM;
+    }
 
     switch (can_format) {
         case CAN_FORMAT:
         case CANFD_FORMAT:
-            ctx->can_format = can_format;
-            ctx->can_max_datalen = can_max_datalen(can_format);
+            (*ctx)->can_format = can_format;
+            (*ctx)->can_max_datalen = can_max_datalen(can_format);
             break;
 
         case NULL_CAN_FORMAT:
         case LAST_CAN_FORMAT:
         default:
+            free(*ctx);
+            *ctx = NULL;
             return -EFAULT;
             break;
     }
@@ -63,34 +68,41 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
     switch (isotp_addressing_mode) {
         case ISOTP_NORMAL_ADDRESSING_MODE:
         case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-            ctx->addressing_mode = isotp_addressing_mode;
-            ctx->address_extension_len = 0;
+            (*ctx)->addressing_mode = isotp_addressing_mode;
+            (*ctx)->address_extension_len = 0;
             break;
 
         case ISOTP_EXTENDED_ADDRESSING_MODE:
         case ISOTP_MIXED_ADDRESSING_MODE:
-            ctx->addressing_mode = isotp_addressing_mode;
-            ctx->address_extension_len = 1;
+            (*ctx)->addressing_mode = isotp_addressing_mode;
+            (*ctx)->address_extension_len = 1;
             break;
 
         case NULL_ISOTP_ADDRESSING_MODE:
         case LAST_ISOTP_ADDRESSING_MODE:
         default:
+            free(*ctx);
+            *ctx = NULL;
             return -EFAULT;
             break;
     }
 
-    ctx->fc_wait_max = max_fc_wait_frames;
+    (*ctx)->fc_wait_max = max_fc_wait_frames;
 
-    ctx->can_ctx = can_ctx;
-    ctx->can_rx_f = can_rx_f;
-    ctx->can_tx_f = can_tx_f;
+    (*ctx)->can_ctx = can_ctx;
+    (*ctx)->can_rx_f = can_rx_f;
+    (*ctx)->can_tx_f = can_tx_f;
 
     // finally, reset everything and set to the IDLE state
-    return isotp_ctx_reset(ctx);
+    int rc = isotp_ctx_reset(*ctx);
+    if (rc < 0) {
+        free(*ctx);
+        *ctx = NULL;
+    }
+    return rc;
 }
 
-int isotp_ctx_reset(isotp_ctx_t* ctx) {
+int isotp_ctx_reset(isotp_ctx_t ctx) {
     if (ctx == NULL) {
         return -EINVAL;
     }
@@ -105,7 +117,7 @@ int isotp_ctx_reset(isotp_ctx_t* ctx) {
     return EOK;
 }
 
-int get_isotp_address_extension(const isotp_ctx_t* ctx) {
+int get_isotp_address_extension(const isotp_ctx_t ctx) {
     if (ctx == NULL) {
         return -EINVAL;
     }
@@ -113,7 +125,7 @@ int get_isotp_address_extension(const isotp_ctx_t* ctx) {
     return ctx->address_extension;
 }
 
-int set_isotp_address_extension(isotp_ctx_t* ctx, const uint8_t ae) {
+int set_isotp_address_extension(isotp_ctx_t ctx, const uint8_t ae) {
     if (ctx == NULL) {
         return -EINVAL;
     }

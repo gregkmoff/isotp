@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
 #include <cmocka.h>
@@ -46,7 +47,7 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     return (int)mock();
 }
 
-int get_isotp_address_extension(const isotp_ctx_t* ctx) {
+int get_isotp_address_extension(const isotp_ctx_t ctx) {
     (void)ctx;
     return (int)mock();
 }
@@ -67,61 +68,73 @@ int pad_can_frame_len(uint8_t* buf, const int buf_len, const can_format_t format
 static void parse_cf_invalid_parameters(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
     assert_true(parse_cf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(parse_cf(&ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(parse_cf(ctx, NULL, sizeof(buf)) == -EINVAL);
 
-    assert_true(parse_cf(&ctx, buf, -1) == -ERANGE);
-    assert_true(parse_cf(&ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(parse_cf(ctx, buf, -1) == -ERANGE);
+    assert_true(parse_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
 
-    ctx.total_datalen = sizeof(buf) + 1;
-    assert_true(parse_cf(&ctx, buf, sizeof(buf)) == -ENOBUFS);
+    ctx->total_datalen = sizeof(buf) + 1;
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ENOBUFS);
+
+    free(ctx);
 }
 
 static void parse_cf_invalid_ael(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf);
+    ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, -ETIME);
-    assert_true(parse_cf(&ctx, buf, sizeof(buf)) == -ETIME);
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ETIME);
+
+    free(ctx);
 }
 
 static void parse_cf_invalid_pci(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf);
+    ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, 0);
-    ctx.can_frame[0] = ~CF_PCI;
-    assert_true(parse_cf(&ctx, buf, sizeof(buf)) == -EBADMSG);
+    ctx->can_frame[0] = ~CF_PCI;
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -EBADMSG);
+
+    free(ctx);
 }
 
 static void parse_cf_invalid_sn(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
     for (int i=0; i < 16; i++) {
-        ctx.total_datalen = sizeof(buf);
-        ctx.remaining_datalen = sizeof(buf);
-        ctx.can_frame[0] = CF_PCI | (uint8_t)(i & 0x0000000fU);
-        ctx.sequence_num = (i + 1) & (0x0000000fU);
+        ctx->total_datalen = sizeof(buf);
+        ctx->remaining_datalen = sizeof(buf);
+        ctx->can_frame[0] = CF_PCI | (uint8_t)(i & 0x0000000fU);
+        ctx->sequence_num = (i + 1) & (0x0000000fU);
 
         will_return(address_extension_len, 0);
-        assert_true(parse_cf(&ctx, buf, sizeof(buf)) == -ECONNABORTED);
-        assert_true(ctx.sequence_num = INT_MAX);
-        assert_true(ctx.remaining_datalen = INT_MAX);
+        assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ECONNABORTED);
+        assert_true(ctx->sequence_num = INT_MAX);
+        assert_true(ctx->remaining_datalen = INT_MAX);
     }
+
+    free(ctx);
 }
 
 static void fill_buf(uint8_t* buf, const int buf_sz, const uint8_t pattern) {
@@ -134,113 +147,134 @@ static void fill_buf(uint8_t* buf, const int buf_sz, const uint8_t pattern) {
 static void parse_cf_success_normal_addressing(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[128];
 
     for (int i=0; i < 64; i++) {
         memset(buf, 0, sizeof(buf));
-        fill_buf(ctx.can_frame, sizeof(ctx.can_frame), 0xde);
+        fill_buf(ctx->can_frame, sizeof(ctx->can_frame), 0xde);
 
-        ctx.can_frame[0] = CF_PCI | 0x00;
-        ctx.sequence_num = 0x00;
-        ctx.can_format = CANFD_FORMAT;  // 64B
-        ctx.can_frame_len = 64;
-        ctx.total_datalen = sizeof(buf);
-        ctx.remaining_datalen = sizeof(buf) - i;
+        ctx->can_frame[0] = CF_PCI | 0x00;
+        ctx->sequence_num = 0x00;
+        ctx->can_format = CANFD_FORMAT;  // 64B
+        ctx->can_frame_len = 64;
+        ctx->total_datalen = sizeof(buf);
+        ctx->remaining_datalen = sizeof(buf) - i;
 
         will_return(address_extension_len, 0);
-        assert_true(parse_cf(&ctx, buf, sizeof(buf)) == 63);
-        assert_memory_equal(&(ctx.can_frame[1]), &(buf[i]), 63);
+        assert_true(parse_cf(ctx, buf, sizeof(buf)) == 63);
+        assert_memory_equal(&(ctx->can_frame[1]), &(buf[i]), 63);
     }
+
+    free(ctx);
 }
 
 static void prepare_cf_invalid_parameters(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
     assert_true(prepare_cf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(prepare_cf(&ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(prepare_cf(ctx, NULL, sizeof(buf)) == -EINVAL);
 
-    assert_true(prepare_cf(&ctx, buf, -1) == -ERANGE);
-    assert_true(prepare_cf(&ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(prepare_cf(ctx, buf, -1) == -ERANGE);
+    assert_true(prepare_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+
+    free(ctx);
 }
 
 static void prepare_cf_invalid_total_datalen(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf) + 1;
+    ctx->total_datalen = sizeof(buf) + 1;
 
-    assert_true(prepare_cf(&ctx, buf, sizeof(buf)) == -EMSGSIZE);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -EMSGSIZE);
+
+    free(ctx);
 }
 
 static void prepare_cf_invalid_ael(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf);
+    ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, -ETIME);
-    assert_true(prepare_cf(&ctx, buf, sizeof(buf)) == -ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+
+    free(ctx);
 }
 
 static void prepare_cf_get_ae_fail(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf);
+    ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, 1);
     will_return(get_isotp_address_extension, -ETIME);
-    assert_true(prepare_cf(&ctx, buf, sizeof(buf)) == -ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+
+    free(ctx);
 }
 
 static void prepare_cf_pad_can_frame_fail(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    ctx.total_datalen = sizeof(buf);
+    ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, 0);
     will_return(can_max_datalen, 64);
     will_return(pad_can_frame_len, -ETIME);
-    assert_true(prepare_cf(&ctx, buf, sizeof(buf)) == -ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+
+    free(ctx);
 }
 
 static void prepare_cf_success_normal_addressing(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t buf[128];
 
     for (int i=0; i < 64; i++) {
         fill_buf(buf, sizeof(buf), 0xba);
-        memset(ctx.can_frame, 0, sizeof(ctx.can_frame));
-        ctx.can_frame_len = 0;
+        memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+        ctx->can_frame_len = 0;
 
-        ctx.total_datalen = sizeof(buf);
-        ctx.remaining_datalen = sizeof(buf) - i;
-        ctx.sequence_num = 0x0eU;
+        ctx->total_datalen = sizeof(buf);
+        ctx->remaining_datalen = sizeof(buf) - i;
+        ctx->sequence_num = 0x0eU;
 
         will_return(address_extension_len, 0);
         will_return(can_max_datalen, 64);
         will_return(pad_can_frame_len, 64);
-        assert_true(prepare_cf(&ctx, buf, sizeof(buf)) == 64);
-        assert_true(ctx.can_frame_len == 64);
-        assert_true(ctx.remaining_datalen == (sizeof(buf) - i - 63));
-        assert_true(ctx.sequence_num == 0x0fU);
-        assert_memory_equal(&(ctx.can_frame[1]), &(buf[i]), 63);
+        assert_true(prepare_cf(ctx, buf, sizeof(buf)) == 64);
+        assert_true(ctx->can_frame_len == 64);
+        assert_true(ctx->remaining_datalen == (sizeof(buf) - i - 63));
+        assert_true(ctx->sequence_num == 0x0fU);
+        assert_memory_equal(&(ctx->can_frame[1]), &(buf[i]), 63);
     }
+
+    free(ctx);
 }
 
 int main(void) {

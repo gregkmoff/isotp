@@ -41,7 +41,7 @@ static void usec_to_ts(struct timespec *ts, const uint64_t us) {
     ts->tv_nsec = (us % USEC_PER_SEC) * NSEC_PER_SEC;
 }
 
-static int send_sf(isotp_ctx_t* ctx,
+static int send_sf(isotp_ctx_t ctx,
                    const uint8_t* send_buf_p,
                    const int send_buf_len,
                    const uint64_t timeout) {
@@ -61,7 +61,7 @@ static int send_sf(isotp_ctx_t* ctx,
     return rc;
 }
 
-static int send_cfs(isotp_ctx_t* ctx,
+static int send_cfs(isotp_ctx_t ctx,
                     const uint8_t* send_buf_p,
                     const int send_buf_len,
                     const uint64_t timeout,
@@ -103,7 +103,7 @@ static int send_cfs(isotp_ctx_t* ctx,
     return EOK;
 }
 
-static int send_ff(isotp_ctx_t* ctx,
+static int send_ff(isotp_ctx_t ctx,
                    const uint8_t* send_buf_p,
                    const int send_buf_len,
                    const uint64_t timeout) {
@@ -174,7 +174,7 @@ static int send_ff(isotp_ctx_t* ctx,
     return EOK;
 }
 
-int isotp_send(isotp_ctx_t* ctx,
+int isotp_send(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len,
                const uint64_t timeout) {

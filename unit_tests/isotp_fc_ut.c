@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
 #include <cmocka.h>
@@ -77,7 +78,7 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     return (int)mock();
 }
 
-int get_isotp_address_extension(const isotp_ctx_t* ctx) {
+int get_isotp_address_extension(const isotp_ctx_t ctx) {
     (void)ctx;
 
     return (int)mock();
@@ -158,116 +159,134 @@ static void fc_stmin_usec_to_parameter_reserved(void** state) {
 static void parse_fc_invalid_parameters(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
     assert_true(parse_fc(NULL, &flowstatus, &blocksize, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(&ctx, NULL, &blocksize, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(&ctx, &flowstatus, NULL, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, NULL) == -EINVAL);
+    assert_true(parse_fc(ctx, NULL, &blocksize, &stmin_usec) == -EINVAL);
+    assert_true(parse_fc(ctx, &flowstatus, NULL, &stmin_usec) == -EINVAL);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, NULL) == -EINVAL);
+
+    free(ctx);
 }
 
 static void parse_fc_invalid_ael(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
     will_return(address_extension_len, -ETIME);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == -ETIME);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ETIME);
+
+    free(ctx);
 }
 
 static void parse_fc_invalid_frame_len(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
-    ctx.can_frame_len = 2;
+    ctx->can_frame_len = 2;
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == -EMSGSIZE);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -EMSGSIZE);
+
+    free(ctx);
 }
 
 static void parse_fc_invalid_pci(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
-    ctx.can_frame_len = 3;
-    memset(ctx.can_frame, 0xde, sizeof(ctx.can_frame));
+    ctx->can_frame_len = 3;
+    memset(ctx->can_frame, 0xde, sizeof(ctx->can_frame));
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == -ENOMSG);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ENOMSG);
+
+    free(ctx);
 }
 
 static void parse_fc_invalid_fs(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
-    ctx.can_frame_len = 3;
-    ctx.can_frame[0] = FC_PCI | 0x07;
+    ctx->can_frame_len = 3;
+    ctx->can_frame[0] = FC_PCI | 0x07;
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == -EBADMSG);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -EBADMSG);
+
+    free(ctx);
 }
 
 static void parse_fc_success(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     isotp_fc_flowstatus_t flowstatus;
     uint8_t blocksize;
     int stmin_usec;
 
     // CTS with NORMAL addressing
-    memset(ctx.can_frame, 0, sizeof(ctx.can_frame));
-    ctx.can_frame_len = 3;
-    ctx.can_frame[0] = FC_PCI | 0x00;
-    ctx.can_frame[1] = UINT8_MAX - 1;
-    ctx.can_frame[2] = MAX_STMIN - 1;
+    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    ctx->can_frame_len = 3;
+    ctx->can_frame[0] = FC_PCI | 0x00;
+    ctx->can_frame[1] = UINT8_MAX - 1;
+    ctx->can_frame[2] = MAX_STMIN - 1;
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
     assert_true(flowstatus == ISOTP_FC_FLOWSTATUS_CTS);
     assert_true(blocksize == UINT8_MAX - 1);
     assert_true(stmin_usec = MAX_STMIN_USEC - USEC_PER_MSEC);
 
     // WAIT with NORMAL addressing
-    memset(ctx.can_frame, 0, sizeof(ctx.can_frame));
-    ctx.can_frame_len = 3;
-    ctx.can_frame[0] = FC_PCI | 0x01;
-    ctx.can_frame[1] = UINT8_MAX / 2;
-    ctx.can_frame[2] = 0xf1;
+    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    ctx->can_frame_len = 3;
+    ctx->can_frame[0] = FC_PCI | 0x01;
+    ctx->can_frame[1] = UINT8_MAX / 2;
+    ctx->can_frame[2] = 0xf1;
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
     assert_true(flowstatus == ISOTP_FC_FLOWSTATUS_WAIT);
     assert_true(blocksize == UINT8_MAX / 2);
     assert_true(stmin_usec = 100);
 
     // OVFLW with MIXED addressing
-    memset(ctx.can_frame, 0, sizeof(ctx.can_frame));
-    ctx.can_frame_len = 4;
-    ctx.can_frame[1] = FC_PCI | 0x02;
-    ctx.can_frame[2] = 0xde;
-    ctx.can_frame[3] = 0xf9;
+    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    ctx->can_frame_len = 4;
+    ctx->can_frame[1] = FC_PCI | 0x02;
+    ctx->can_frame[2] = 0xde;
+    ctx->can_frame[3] = 0xf9;
     will_return(address_extension_len, 1);
-    assert_true(parse_fc(&ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == 0);
     assert_true(flowstatus == ISOTP_FC_FLOWSTATUS_OVFLW);
     assert_true(blocksize == 0xde);
     assert_true(stmin_usec = 900);
+
+    free(ctx);
 }
 
 static void prepare_fc_invalid_parameters(void** state) {
@@ -279,69 +298,88 @@ static void prepare_fc_invalid_parameters(void** state) {
 static void prepare_fc_invalid_ael(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
 
     will_return(address_extension_len, -ETIME);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ETIME);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ETIME);
+
+    free(ctx);
 }
 
 static void prepare_fc_invalid_flowstatus(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
+
     will_return(address_extension_len, 0);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -EINVAL);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -EINVAL);
     will_return(address_extension_len, 0);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_LAST, 0, 0) == -EINVAL);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_LAST, 0, 0) == -EINVAL);
+
+    free(ctx);
 }
 
 static void prepare_fc_cts_success(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t fc[8] = { 0x30, 0x10, 0xf9 };
 
     will_return(address_extension_len, 0);
     will_return(pad_can_frame_len, 3);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_CTS, 0x10, 900) == 3);
-    assert_true(ctx.can_frame_len == 3);
-    assert_memory_equal(ctx.can_frame, fc, 3);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_CTS, 0x10, 900) == 3);
+    assert_true(ctx->can_frame_len == 3);
+    assert_memory_equal(ctx->can_frame, fc, 3);
+
+    free(ctx);
 }
 
 static void prepare_fc_wait_success(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t fc[8] = { 0x31, 0x20, 0x02 };
 
     will_return(address_extension_len, 0);
     will_return(pad_can_frame_len, 3);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_WAIT, 0x20, 2000) == 3);
-    assert_true(ctx.can_frame_len == 3);
-    assert_memory_equal(ctx.can_frame, fc, 3);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_WAIT, 0x20, 2000) == 3);
+    assert_true(ctx->can_frame_len == 3);
+    assert_memory_equal(ctx->can_frame, fc, 3);
+
+    free(ctx);
 }
 
 static void prepare_fc_overflow_success(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
     uint8_t fc[8] = { 0x32, 0x30, 0x7f };
 
     will_return(address_extension_len, 0);
     will_return(pad_can_frame_len, 3);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == 3);
-    assert_true(ctx.can_frame_len == 3);
-    assert_memory_equal(ctx.can_frame, fc, 3);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == 3);
+    assert_true(ctx->can_frame_len == 3);
+    assert_memory_equal(ctx->can_frame, fc, 3);
+
+    free(ctx);
 }
 
 static void prepare_fc_pad_frame_failure(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx;
+    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    assert_true(ctx != NULL);
 
     will_return(address_extension_len, 0);
     will_return(pad_can_frame_len, -ETIME);
-    assert_true(prepare_fc(&ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == -ETIME);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == -ETIME);
+
+    free(ctx);
 }
 
 int main(void) {

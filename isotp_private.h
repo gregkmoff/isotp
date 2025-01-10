@@ -93,7 +93,6 @@ struct isotp_ctx_s {
                             // set at initialization time only
     uint8_t fc_wait_count;  // number of FC.WAIT frames received
 };
-typedef struct isotp_ctx_s isotp_ctx_t;
 
 // ref ISO-15765-2:2016, table 18
 enum isotp_fc_flowstatus_e {
@@ -130,7 +129,7 @@ typedef enum isotp_fc_flowstatus_e isotp_fc_flowstatus_t;
  * on success (>=0), number of payload bytes received into the buffer
  * otherwise (<0), error code indicating the failure
  */
-int receive_sf(isotp_ctx_t* ctx,
+int receive_sf(isotp_ctx_t ctx,
                uint8_t* recv_buf_p,
                const int recv_buf_sz,
                const uint64_t timeout_us __attribute__((unused)));
@@ -151,24 +150,24 @@ int receive_sf(isotp_ctx_t* ctx,
  * on success (>=0), number of payload bytes copied into the CAN frame
  * otherwise (<0), error code indicating the failure
  */
-int send_fc(isotp_ctx_t* ctx,
+int send_fc(isotp_ctx_t ctx,
             const isotp_fc_flowstatus_t fc_flowstatus,
             const uint8_t fc_blocksize,
             const uint8_t fc_stmin);
 
-int parse_cf(isotp_ctx_t* ctx,
+int parse_cf(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz);
 
-int prepare_cf(isotp_ctx_t* ctx,
+int prepare_cf(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len);
 
-int parse_ff(isotp_ctx_t* ctx,
+int parse_ff(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz);
 
-int prepare_ff(isotp_ctx_t* ctx,
+int prepare_ff(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len);
 
@@ -189,7 +188,7 @@ int prepare_ff(isotp_ctx_t* ctx,
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
-int prepare_sf(isotp_ctx_t* ctx,
+int prepare_sf(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len);
 
@@ -210,7 +209,7 @@ int prepare_sf(isotp_ctx_t* ctx,
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
-int parse_sf(isotp_ctx_t* ctx,
+int parse_sf(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz);
 
@@ -232,7 +231,7 @@ int parse_sf(isotp_ctx_t* ctx,
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
-int parse_fc(isotp_ctx_t* ctx,
+int parse_fc(isotp_ctx_t ctx,
              isotp_fc_flowstatus_t* flowstatus,
              uint8_t* blocksize,
              int* stmin_usec);
@@ -253,7 +252,7 @@ int parse_fc(isotp_ctx_t* ctx,
  *     -EINVAL = a parameter is invalid
  *     <0 = other error
  */
-int prepare_fc(isotp_ctx_t* ctx,
+int prepare_fc(isotp_ctx_t ctx,
                const isotp_fc_flowstatus_t flowstatus,
                const uint8_t blocksize,
                const int stmin_usec);
@@ -299,7 +298,7 @@ uint64_t get_time(void);
  * on success, non-NULL pointer to the start of the ISOTP frame data within the CAN frame
  * otherwise, NULL.  The ctx parameter or ISOTP addressing mode is invalid
  */
-uint8_t* frame_data_ptr(isotp_ctx_t* ctx);
+uint8_t* frame_data_ptr(isotp_ctx_t ctx);
 
 /**
  * @brief return the maximum CAN frame data length
@@ -338,4 +337,4 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode);
  * on success, maximum SF data transmission size
  * otherwise, <0, error code
  */
-int max_sf_datalen(const isotp_ctx_t* ctx);
+int max_sf_datalen(const isotp_ctx_t ctx);

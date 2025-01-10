@@ -37,7 +37,7 @@
 #define SF_DL_PCI_MASK (0x0f)
 #define SF_PCI (0x00)
 
-static int parse_sf_with_esc(isotp_ctx_t* ctx,
+static int parse_sf_with_esc(isotp_ctx_t ctx,
                              uint8_t** dp) {
     if (dp == NULL) {
         return -EINVAL;
@@ -78,7 +78,7 @@ static int parse_sf_with_esc(isotp_ctx_t* ctx,
     return (int)sf_dl;
 }
 
-static int parse_sf_no_esc(isotp_ctx_t* ctx,
+static int parse_sf_no_esc(isotp_ctx_t ctx,
                            uint8_t** dp) {
     if (dp == NULL) {
         return -EINVAL;
@@ -117,7 +117,7 @@ static int parse_sf_no_esc(isotp_ctx_t* ctx,
     return (int)sf_dl;
 }
 
-int parse_sf(isotp_ctx_t* ctx,
+int parse_sf(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
@@ -167,7 +167,7 @@ int parse_sf(isotp_ctx_t* ctx,
     return sf_dl;
 }
 
-int prepare_sf(isotp_ctx_t* ctx,
+int prepare_sf(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len) {
     if ((ctx == NULL) || (send_buf_p == NULL)) {

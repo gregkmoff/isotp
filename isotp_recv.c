@@ -30,7 +30,7 @@
 #include <isotp.h>
 #include <isotp_private.h>
 
-static int recv_cfs(isotp_ctx_t* ctx,
+static int recv_cfs(isotp_ctx_t ctx,
                     uint8_t* recv_buf_p,
                     const int recv_buf_sz,
                     const uint8_t blocksize,
@@ -83,7 +83,7 @@ static int recv_cfs(isotp_ctx_t* ctx,
     return rc;
 }
 
-int isotp_recv(isotp_ctx_t* ctx,
+int isotp_recv(isotp_ctx_t ctx,
                uint8_t* recv_buf_p,
                const int recv_buf_sz,
                const uint8_t blocksize,

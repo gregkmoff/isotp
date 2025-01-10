@@ -37,7 +37,7 @@
 #define CF_SN_MASK (0x0f)
 #define CF_MAX_SN (0x0f)
 
-int parse_cf(isotp_ctx_t* ctx,
+int parse_cf(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz) {
     if ((ctx == NULL) ||
@@ -102,7 +102,7 @@ int parse_cf(isotp_ctx_t* ctx,
     return copy_len;
 }
 
-int prepare_cf(isotp_ctx_t* ctx,
+int prepare_cf(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len) {
     if ((ctx == NULL) ||

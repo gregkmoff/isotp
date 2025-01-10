@@ -41,7 +41,7 @@
 /**
  * @ref ISO-15765-2:2016, table 14
  */
-static int FF_DLmin(const isotp_ctx_t* ctx) {
+static int FF_DLmin(const isotp_ctx_t ctx) {
     if (ctx == NULL) {
         return -EINVAL;
     }
@@ -62,7 +62,7 @@ static int FF_DLmin(const isotp_ctx_t* ctx) {
     }
 }
 
-int parse_ff(isotp_ctx_t* ctx,
+int parse_ff(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
@@ -142,7 +142,7 @@ int parse_ff(isotp_ctx_t* ctx,
     return copy_len;
 }
 
-static int prepare_ff_no_esc(isotp_ctx_t* ctx,
+static int prepare_ff_no_esc(isotp_ctx_t ctx,
                              const uint8_t* send_buf_p,
                              const int send_buf_len) {
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
@@ -178,7 +178,7 @@ static int prepare_ff_no_esc(isotp_ctx_t* ctx,
     return copy_len;
 }
 
-static int prepare_ff_with_esc(isotp_ctx_t* ctx,
+static int prepare_ff_with_esc(isotp_ctx_t ctx,
                                const uint8_t* send_buf_p,
                                const int send_buf_len) {
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
@@ -228,7 +228,7 @@ static int prepare_ff_with_esc(isotp_ctx_t* ctx,
     return copy_len;
 }
 
-int prepare_ff(isotp_ctx_t* ctx,
+int prepare_ff(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len) {
     if ((ctx == NULL) || (send_buf_p == NULL)) {

@@ -50,7 +50,7 @@
 #define MAX_STMIN (0x7f)
 #define MAX_STMIN_USEC (MAX_STMIN * USEC_PER_MSEC)
 
-int parse_fc(isotp_ctx_t* ctx,
+int parse_fc(isotp_ctx_t ctx,
              isotp_fc_flowstatus_t* flowstatus,
              uint8_t* blocksize,
              int* stmin_usec) {
@@ -107,7 +107,7 @@ int parse_fc(isotp_ctx_t* ctx,
     return EOK;
 }
 
-int prepare_fc(isotp_ctx_t* ctx,
+int prepare_fc(isotp_ctx_t ctx,
                const isotp_fc_flowstatus_t flowstatus,
                const uint8_t blocksize,
                const int stmin_usec) {
