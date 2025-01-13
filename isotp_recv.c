@@ -109,7 +109,7 @@ int isotp_recv(isotp_ctx_t ctx,
         return rc;
     }
 
-    switch ((ctx->can_frame[ctx->address_extension_len + 1]) & PCI_MASK) {
+    switch ((ctx->can_frame[ctx->address_extension_len]) & PCI_MASK) {
         case SF_PCI:
             rc = parse_sf(ctx, recv_buf_p, recv_buf_sz);
             break;

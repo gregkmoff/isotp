@@ -61,6 +61,7 @@ OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
 REV=$(git rev-parse --short HEAD)
 CMOCKA_FLAGS=$(pkg-config --cflags --libs cmocka)
+LIB = ${BUILD_DIR}/libisotp.so
 
 default: all
 
@@ -85,9 +86,9 @@ lib: $(OBJS)
 	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
 	@echo "...generating version $(GIT_TAG)"
 	$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
-	@ln -s libisotp.$(GIT_TAG).so ${BUILD_DIR}/libisotp.so
+	@ln -s libisotp.$(GIT_TAG).so ${LIB}
 
-.PHONY : clean all lib test
+.PHONY : clean all lib test main_test
 
 clean :
 	@rm -rf ${BUILD_DIR}
@@ -104,3 +105,7 @@ test: $(UNIT_TESTS) $(OBJS)
 	${BUILD_DIR}/isotp_ff_ut
 	@$(CC) -I. -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
 	${BUILD_DIR}/isotp_sf_ut
+
+main_test: $(LIB)
+	$(CC) -I. -L${BUILD_DIR} -lc -lisotp unit_tests/main_test.c -o ${BUILD_DIR}/main_test
+	${BUILD_DIR}/main_test
