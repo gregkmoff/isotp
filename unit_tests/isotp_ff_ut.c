@@ -272,6 +272,7 @@ static void prepare_ff_invalid_parameters(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     assert_true(prepare_ff(NULL, buf, sizeof(buf)) == -EINVAL);
     assert_true(prepare_ff(ctx, NULL, sizeof(buf)) == -EINVAL);
@@ -284,6 +285,7 @@ static void prepare_ff_invalid_ffdlmin(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->can_format = LAST_CAN_FORMAT;
     assert_true(prepare_ff(ctx, buf, sizeof(buf)) == -EFAULT);
@@ -296,6 +298,7 @@ static void prepare_ff_invalid_datalen(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->can_format = CAN_FORMAT;
     ctx->address_extension_len = 0;

@@ -61,6 +61,7 @@ static void prepare_sf_invalid_parameters(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     assert_true(prepare_sf(NULL, buf, sizeof(buf)) == -EINVAL);
     assert_true(prepare_sf(ctx, NULL, sizeof(buf)) == -EINVAL);
@@ -73,6 +74,7 @@ static void prepare_sf_invalid_length(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     assert_true(prepare_sf(ctx, buf, -1) == -ERANGE);
     assert_true(prepare_sf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
@@ -85,6 +87,7 @@ static void prepare_sf_invalid_addressing_mode(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->addressing_mode = NULL_ISOTP_ADDRESSING_MODE;
 
@@ -98,6 +101,7 @@ static void prepare_sf_overflow(void** state) {
 
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->can_max_datalen = 8;

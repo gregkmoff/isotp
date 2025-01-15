@@ -176,6 +176,7 @@ static void prepare_cf_invalid_parameters(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     assert_true(prepare_cf(NULL, buf, sizeof(buf)) == -EINVAL);
     assert_true(prepare_cf(ctx, NULL, sizeof(buf)) == -EINVAL);
@@ -192,6 +193,7 @@ static void prepare_cf_invalid_total_datalen(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->total_datalen = sizeof(buf) + 1;
 
@@ -206,6 +208,7 @@ static void prepare_cf_invalid_ael(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->total_datalen = sizeof(buf);
 
@@ -221,6 +224,7 @@ static void prepare_cf_get_ae_fail(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->total_datalen = sizeof(buf);
 
@@ -237,6 +241,7 @@ static void prepare_cf_pad_can_frame_fail(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
     uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
 
     ctx->total_datalen = sizeof(buf);
 
