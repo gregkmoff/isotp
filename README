@@ -1,83 +1,21 @@
-To use ISOTP:
+ISOTP
 
-1. initialize a pre-allocated ISOTP context, providing a receive frame and transmit frame
-2. to receive an ISOTP payload:
+This project implements a transport-agnostic implementation of ISOTP,
+based on the spec (ref ISO-15765-2:2016).
 
-    const uint32_t recv_buf_sz = 256;
-    uint8_t recv_buf_p[recv_buf_sz];
-    isotp_rc_t isotp_rc = ISOTP_RC_OK;
-    uint32_t recv_len = 0;
+To use this project:
 
-    ctx.rx_frame.datalen = 0;
+1. Invoke isotp_ctx_init() passing in the following:
+   - a pointer to an ISOTP context which will be allocated
+   - what CAN frame format to use (CAN, CAN-FD)
+   - ISOTP addressing mode
+   - pointer to a CAN transmit and CAN receive function
+   - pointer to an opaque CAN context to be passed to the CAN transmit
+     and receive functions
 
-    do {
-        isotp_rc = isotp_receive(&ctx, recv_buf_p, recv_buf_sz, &recv_len);
+2. To send ISOTP data, invoke isotp_send()
+3. To receive ISOTP data, invoke isotp_recv()
 
-        switch (isotp_rc) {
-            case ISOTP_RC_TRANSMIT:
-            can_write(&ctx.tx_frame);
-            break;
+Before sending or receiving invoke isotp_ctx_reset() on the ISOTP context.
 
-            case ISOTP_RC_RECEIVE:
-            can_read(&ctx.rx_frame);
-            break;
-
-            case ISOTP_RC_WAIT:
-            delay(ctx.delay_us);
-            break;
-
-            case ISOTP_RC_ABORT:
-            case ISOTP_RC_DONE:
-            break;
-
-            default:
-            assert(0);
-            break;
-        }
-    } while ((isotp_rc != ISOTP_RC_ABORT) && (isotp_rc != ISOTP_RC_DONE));
-
-    if (isotp_rc == ISOTP_RC_ABORT) {
-        return;
-    }
-
-    // recv_buf_p contains recv_len bytes of payload
-
-
-
-
-
-A. To receive a multi-CAN frame message:
-   1. isotp_ctx_reset()
-   2. CAN frame (ISOTP FF) received into ctx->rx_frame
-        isotp_receive()
-          receive_ff()
-            transmit_fc()
-              (switched into ISOTP_STATE_RECEIVING)
-              returns ISOTP_RC_TRANSMIT
-      CAN frame (ISOTP FC) transmitted from ctx->tx_frame
-      
-   3. While we have receive less than <blocksize> ISOTP CF CAN frames:
-      CAN frame (ISOTP CF) received into ctx->rx_frame
-        isotp_receive()
-          receive_cf()
-            returns ISOTP_RC_RECEIVE
-      
-   4. Once we have received the last <blocksize> ISOTP CF CAN frames:
-      CAN frame (ISOTP CF) received into ctx->rx_frame
-        isotp_receive()
-          receive_cf()
-            transmit_fc()
-              returns ISOTP_RC_TRANSMIT
-      CAN frame (ISOTP FC) transmitted from ctx->tx_frame
-
-   5. Repeat 3-4 until entire message sent
-
-   6. Last call to isotp_receive() returns ISOTP_RC_DONE
-      (switched into ISOTP_STATE_DONE)
-
-B. To send a multi-CAN frame message:
-   1. isotp_ctx_reset()
-   2. CAN frame (ISOTP FF) written into ctx->tx_frame
-        isotp_transmit()
-          transmit_ff()
-          
+For an example refer to unit_tests/main_test.c

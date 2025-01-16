@@ -1,5 +1,2 @@
-- build files
-- UT for FF, CF
-- finish top level state machines
-- timers
-- system tests
+- continue cleanup of old code and comment blocks
+- minor conformance issues with ISO-15765-2:2016
