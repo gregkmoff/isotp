@@ -23,6 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -125,18 +126,21 @@ int parse_sf(isotp_ctx_t ctx,
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
+assert(0);
         return -ERANGE;
     }
 
     // verify the length of the CAN frame
     if ((ctx->can_frame_len < 0) ||
         (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT))) {
+assert(0);
         return -EBADMSG;
     }
 
     // verify that the frame contains an ISOTP SF header
     if ((ctx->can_frame[ctx->address_extension_len] & PCI_MASK) != SF_PCI) {
         // not an SF
+assert(0);
         return -EBADMSG;
     }
 
@@ -164,6 +168,7 @@ int parse_sf(isotp_ctx_t ctx,
     ctx->total_datalen = 0;
     ctx->remaining_datalen = 0;
 
+    printbuf("Recv SF", ctx->can_frame, ctx->can_frame_len);
     return sf_dl;
 }
 
@@ -175,6 +180,7 @@ int prepare_sf(isotp_ctx_t ctx,
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
+assert(0);
         return -ERANGE;
     }
 
@@ -248,5 +254,6 @@ int prepare_sf(isotp_ctx_t ctx,
     ctx->can_frame_len += send_buf_len;
     pad_can_frame(ctx->can_frame, ctx->can_frame_len, ctx->can_format);
 
+    printbuf("Send SF", ctx->can_frame, ctx->can_frame_len);
     return send_buf_len;
 }

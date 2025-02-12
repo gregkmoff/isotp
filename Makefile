@@ -41,21 +41,12 @@ SRCS = isotp.c \
 	isotp_send.c \
 	isotp_sf.c \
 	can/can.c
-LINTS = isotp.lint \
-	isotp_addressing.lint \
-	isotp_cf.lint \
-	isotp_common.lint \
-	isotp_fc.lint \
-	isotp_ff.lint \
-	isotp_recv.lint \
-	isotp_send.lint \
-	isotp_sf.lint \
-	can/can.lint
 UNIT_TESTS = can/can_ut.c
 
 CC = gcc
 CFLAGS += -c -I. -W -Wall -Werror -fPIC
 LINT = cpplint
+LINT_FLAGS = --filter=-readability/casting,-build/include_what_you_use
 BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
@@ -65,33 +56,38 @@ LIB = ${BUILD_DIR}/libisotp.so
 
 default: all
 
-all : setup $(OBJS) $(LINTS) lib
+all : setup $(OBJS) lib
 
 setup:
 	@mkdir -p ${BUILD_DIR}
 	@mkdir -p ${OBJ_DIR}/can
 	@mkdir -p ${LINT_DIR}/can
 
-%.o : %.c | %.lint
+%.o : %.c
 	$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
 
-can/%.o : can/%.c | can/%.lint
+can/%.o : can/%.c
 	$(CC) -o ${OBJ_DIR}/$@ $(CFLAGS) $<
 
-%.lint : %.c
-	$(LINT) --filter=-readability/casting $< > ${LINT_DIR}/$@
-
-lib: $(OBJS)
+lib: setup $(SRCS) $(OBJS)
 	@echo "Linking libisotp.so..."
 	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
 	@echo "...generating version $(GIT_TAG)"
 	$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
-	@ln -s libisotp.$(GIT_TAG).so ${LIB}
+	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
 
 .PHONY : clean all lib test main_test
 
 clean :
 	@rm -rf ${BUILD_DIR}
+
+.PHONY : lint
+lint: $(SRCS)
+	@$(LINT) $(LINT_FLAGS) $(SRCS)
+
+.PHONY : debug
+debug: CFLAGS += -g -DDEBUG
+debug: lib
 
 test: $(UNIT_TESTS) $(OBJS)
 	@$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
@@ -109,3 +105,6 @@ test: $(UNIT_TESTS) $(OBJS)
 main_test: $(LIB)
 	$(CC) -I. -L${BUILD_DIR} -lc -lisotp unit_tests/main_test.c -o ${BUILD_DIR}/main_test
 	${BUILD_DIR}/main_test
+
+isotp_udp: debug
+	$(CC) -g -DDEBUG -I. -L${BUILD_DIR} -lc -lisotp unit_tests/isotp_udp.c -o ${BUILD_DIR}/isotp_udp

@@ -94,6 +94,7 @@ int parse_fc(isotp_ctx_t ctx,
     default:
         // invalid FS
         // @ref ISO-15765-2:2016, section 9.6.5.2
+assert(0);
         return -EBADMSG;
     }
 
@@ -104,6 +105,7 @@ int parse_fc(isotp_ctx_t ctx,
     // @ref ISO-15765-2:2016, section 9.6.5.5
     *stmin_usec = fc_stmin_parameter_to_usec(ctx->can_frame[ae_l + 2]);
 
+    printbuf("Recv FC", ctx->can_frame, ctx->can_frame_len);
     return EOK;
 }
 
@@ -145,7 +147,9 @@ int prepare_fc(isotp_ctx_t ctx,
         break;
 
     default:
+        #ifdef DEBUG
         assert(0);
+        #endif  // DEBUG
         return -EFAULT;
     }
     ctx->can_frame_len++;
@@ -178,6 +182,7 @@ int prepare_fc(isotp_ctx_t ctx,
         ctx->can_frame_len = pad_rc;
     }
 
+    printbuf("Send FC", ctx->can_frame, ctx->can_frame_len);
     return ctx->can_frame_len;
 }
 
@@ -199,8 +204,10 @@ uint8_t fc_stmin_usec_to_parameter(const int stmin_usec) {
 
     // make sure the parameter isn't a reserved value
     // 0x80-0xf0, 0xfa-0xff reserved
+    #ifdef DEBUG
     assert(((stmin_param >= 0x00) && (stmin_param <= MAX_STMIN)) ||
            ((stmin_param >= 0xf1) && (stmin_param <= 0xf9)));
+    #endif  // DEBUG
 
     return stmin_param;
 }
@@ -221,7 +228,10 @@ int fc_stmin_parameter_to_usec(const uint8_t stmin_param) {
     }
 
     // make sure the returned value is within the 0-127ms range
-    assert((stmin_usec >= 0) && (stmin_usec <= MAX_STMIN_USEC));
+    #ifdef DEBUG
+    assert(stmin_usec >= 0);
+    assert(stmin_usec <= MAX_STMIN_USEC);
+    #endif  // DEBUG
 
     return stmin_usec;
 }

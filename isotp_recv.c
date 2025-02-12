@@ -66,6 +66,8 @@ static int recv_cfs(isotp_ctx_t ctx,
                 return rc;
             }
 
+            ctx->can_frame_len = rc;
+
             // make sure the CAN frame contains a CF
             // this will also validate the sequence number
             // and update the remaining_datalen
@@ -108,6 +110,8 @@ int isotp_recv(isotp_ctx_t ctx,
     if (rc < 0) {
         return rc;
     }
+
+    ctx->can_frame_len = rc;
 
     switch ((ctx->can_frame[ctx->address_extension_len]) & PCI_MASK) {
         case SF_PCI:

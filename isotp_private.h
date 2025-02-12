@@ -338,3 +338,5 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode);
  * otherwise, <0, error code
  */
 int max_sf_datalen(const isotp_ctx_t ctx);
+
+void printbuf(const char* header, const uint8_t* buf, const int buf_len);

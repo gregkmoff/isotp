@@ -70,6 +70,7 @@ int parse_ff(isotp_ctx_t ctx,
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
+assert(0);
         return -ERANGE;
     }
 
@@ -83,6 +84,7 @@ int parse_ff(isotp_ctx_t ctx,
 
     // make sure this is an FF_PCI
     if ((*sp & PCI_MASK) != FF_PCI) {
+assert(0);
         return -EBADMSG;
     }
 
@@ -122,6 +124,7 @@ int parse_ff(isotp_ctx_t ctx,
     if (ff_dl < ff_dlmin) {
         // ignore this frame
         // @ref ISO-15765-2:2016, section 9.6.3.2
+assert(0);
         return -EBADMSG;
     }
 
@@ -139,6 +142,7 @@ int parse_ff(isotp_ctx_t ctx,
     ctx->remaining_datalen = ff_dl - copy_len;
     ctx->sequence_num = 1;  // next CF should have SN=1
 
+    printbuf("Recv FF", ctx->can_frame, ctx->can_frame_len);
     return copy_len;
 }
 
@@ -175,6 +179,7 @@ static int prepare_ff_no_esc(isotp_ctx_t ctx,
     ctx->sequence_num = 1;  // FF=0, expect first CF with SN=1
     ctx->can_frame_len += copy_len;
 
+    printbuf("Send FF no ESC", ctx->can_frame, ctx->can_frame_len);
     return copy_len;
 }
 
@@ -225,6 +230,7 @@ static int prepare_ff_with_esc(isotp_ctx_t ctx,
     ctx->sequence_num = 1;  // FF=0, expect first CF with SN=1
     ctx->can_frame_len += copy_len;
 
+    printbuf("Send FF with ESC", ctx->can_frame, ctx->can_frame_len);
     return copy_len;
 }
 
@@ -247,6 +253,7 @@ int prepare_ff(isotp_ctx_t ctx,
     } else if ((send_buf_len >= 4096) && (send_buf_len <= MAX_TX_DATALEN)) {
         return prepare_ff_with_esc(ctx, send_buf_p, send_buf_len);
     } else {
+assert(0);
         return -ERANGE;
     }
 }

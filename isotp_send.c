@@ -23,6 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
@@ -184,6 +185,8 @@ int isotp_send(isotp_ctx_t ctx,
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
+assert(send_buf_len >= 0);
+assert(send_buf_len <= MAX_TX_DATALEN);
         return -ERANGE;
     }
 

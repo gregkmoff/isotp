@@ -46,6 +46,10 @@ int parse_cf(isotp_ctx_t ctx,
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
+        #ifdef DEBUG
+        assert(recv_buf_sz >= 0);
+        assert(recv_buf_sz <= MAX_TX_DATALEN);
+        #endif  // DEBUG
         return -ERANGE;
     }
 
@@ -61,7 +65,8 @@ int parse_cf(isotp_ctx_t ctx,
 
     // check for the CF PCI
     if ((ctx->can_frame[ae_l] & PCI_MASK) != CF_PCI) {
-        return -EBADMSG;
+        // not a CF == ignore
+        return 0;
     }
 
     // validate the sequence number; it should be the next one
@@ -79,7 +84,10 @@ int parse_cf(isotp_ctx_t ctx,
         // advance the expected sequence number
         ctx->sequence_num++;
         ctx->sequence_num &= 0x0000000fU;
-        assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000f));
+        #ifdef DEBUG
+        assert(ctx->sequence_num >= 0);
+        assert(ctx->sequence_num <= 0x0000000f);
+        #endif  // DEBUG
     }
 
     // capture the address extension
@@ -92,13 +100,21 @@ int parse_cf(isotp_ctx_t ctx,
     uint8_t* dp = &(recv_buf_p[ctx->total_datalen - ctx->remaining_datalen]);
     int copy_len = MIN(ctx->can_frame_len - (ae_l + 1),
                        ctx->remaining_datalen);
-    assert(copy_len >= 0);
+    if (copy_len < 0) {
+        #ifdef DEBUG
+        assert(copy_len >= 0);
+        #endif  // DEBUG
+        return -EFAULT;
+    }
     memcpy(dp, sp, copy_len);
 
     ctx->remaining_datalen -= copy_len;
-    assert((ctx->remaining_datalen >= 0) &&
-           (ctx->remaining_datalen <= ctx->total_datalen));
+    #ifdef DEBUG
+    assert(ctx->remaining_datalen >= 0);
+    assert(ctx->remaining_datalen <= ctx->total_datalen);
+    #endif  // DEBUG
 
+    printbuf("Recv CF", ctx->can_frame, ctx->can_frame_len);
     return copy_len;
 }
 
@@ -111,6 +127,10 @@ int prepare_cf(isotp_ctx_t ctx,
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
+        #ifdef DEBUG
+        assert(send_buf_len >= 0);
+        assert(send_buf_len <= MAX_TX_DATALEN);
+        #endif  // DEBUG
         return -ERANGE;
     }
 
@@ -149,7 +169,10 @@ int prepare_cf(isotp_ctx_t ctx,
     // advance the SN
     ctx->sequence_num++;
     ctx->sequence_num &= 0x0000000fU;
-    assert((ctx->sequence_num >= 0) && (ctx->sequence_num <= 0x0000000f));
+    #ifdef DEBUG
+    assert(ctx->sequence_num >= 0);
+    assert(ctx->sequence_num <= 0x0000000f);
+    #endif  // DEBUG
 
     // copy the data
     int copy_len = MIN(can_max_datalen(ctx->can_format) - ctx->can_frame_len,
@@ -166,7 +189,10 @@ int prepare_cf(isotp_ctx_t ctx,
 
     ctx->can_frame_len = pad_rc;
     ctx->remaining_datalen -= copy_len;
+    #ifdef DEBUG
     assert(ctx->remaining_datalen >= 0);
+    #endif  // DEBUG
 
+    printbuf("Send CF", ctx->can_frame, ctx->can_frame_len);
     return ctx->can_frame_len;
 }

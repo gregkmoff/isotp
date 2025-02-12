@@ -25,6 +25,9 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#ifdef DEBUG
+#include <stdio.h>
+#endif  // DEBUG
 #include <string.h>
 
 #include <can/can.h>
@@ -132,4 +135,19 @@ int set_isotp_address_extension(isotp_ctx_t ctx, const uint8_t ae) {
 
     ctx->address_extension = ae;
     return EOK;
+}
+
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
+#ifdef DEBUG
+    printf("%s [ ", header);
+    for (int i=0; i < buf_len; i++) {
+        printf("%02x ", buf[i]);
+    }
+    printf(" ]\n");
+    fflush(stdout);
+#else
+    (void)header;
+    (void)buf;
+    (void)buf_len;
+#endif  // DEBUG
 }
