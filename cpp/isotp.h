@@ -61,12 +61,10 @@
  * - data bytes 3-N are the payload
  */
 enum isotp_addressing_mode_e {
-    NULL_ISOTP_ADDRESSING_MODE,
     ISOTP_NORMAL_ADDRESSING_MODE,
     ISOTP_NORMAL_FIXED_ADDRESSING_MODE,
     ISOTP_EXTENDED_ADDRESSING_MODE,
-    ISOTP_MIXED_ADDRESSING_MODE,
-    LAST_ISOTP_ADDRESSING_MODE
+    ISOTP_MIXED_ADDRESSING_MODE
 };
 typedef enum isotp_addressing_mode_e isotp_addressing_mode_t;
 
@@ -77,23 +75,6 @@ enum isotp_fc_flowstatus_e {
     ISOTP_FC_FLOWSTATUS_OVFLW
 };
 typedef enum isotp_fc_flowstatus_e isotp_fc_flowstatus_t;
-
-static bool extended_addressing_mode(const isotp_addressing_mode_t m) {
-    switch (m) {
-    case ISOTP_EXTENDED_ADDRESSING_MODE:
-    case ISOTP_MIXED_ADDRESSING_MODE:
-        return true;
-        break;
-
-    case NULL_ISOTP_ADDRESSING_MODE:
-    case ISOTP_NORMAL_ADDRESSING_MODE:
-    case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-    case LAST_ISOTP_ADDRESSING_MODE:
-    default:
-        return false;
-        break;
-    }
-}
 
 enum isotp_frame_type_e {
     ISOTP_SF,
@@ -106,8 +87,9 @@ typedef enum isotp_frame_type_e isotp_frame_type_t;
 class isotp {
  public:
     isotp(const can_format_t             can_format,
-          const isotp_addressing_mode_t  addressing_mode,
-          const std::uint8_t             max_fc_wait_frames);
+          const isotp_addressing_mode_t  addressing_mode =
+                ISOTP_NORMAL_ADDRESSING_MODE,
+          const std::uint8_t             max_fc_wait_frames = 0);
 
     int send(const std::uint8_t*  send_buf_p,
              const int            send_buf_len,
@@ -128,8 +110,7 @@ class isotp {
                      const std::uint64_t  timeout_usec) = 0;
 
     uint8_t get_address_extension(void);
-    void set_address_extension(const std::uint8_t  address_extension,
-                               const int           address_extension_len);
+    void set_address_extension(const std::uint8_t  address_extension);
 
  protected:
     std::uint8_t  _can_frame[64];
@@ -141,7 +122,6 @@ class isotp {
 
     isotp_addressing_mode_t  _addressing_mode;
     std::uint8_t             _address_extension;
-    int                      _address_extension_len;
 
     std::uint64_t  _wait_interval_us;
 
@@ -157,9 +137,11 @@ class isotp {
     std::uint8_t  _fc_wait_count;
 
 
+    bool extended_addressing_mode(void);
+
     // attempt to process the data in the CAN frame buffer as the specified
-    // ISOTP frame.  Any received data in the ISOTP frame will be written into the buffer
-    // provided at buf_p, up to a size of buf_sz
+    // ISOTP frame.  Any received data in the ISOTP frame will be written
+    // into the buffer provided at buf_p, up to a size of buf_sz
     int process(const isotp_frame_type_t frame_type,
                 std::uint8_t*            buf_p = nullptr,
                 const int                buf_sz = 0);

@@ -101,19 +101,9 @@ isotp::isotp(const can_format_t             can_format,
         throw std::range_error("can_format is invalid");
     }
 
-    if ((addressing_mode == ISOTP_NORMAL_ADDRESSING_MODE) ||
-        (addressing_mode == ISOTP_NORMAL_FIXED_ADDRESSING_MODE)) {
-        _addressing_mode = addressing_mode;
-        _address_extension_len = 0;
-    } else if ((addressing_mode == ISOTP_EXTENDED_ADDRESSING_MODE) ||
-               (addressing_mode == ISOTP_MIXED_ADDRESSING_MODE)) {
-        _addressing_mode = addressing_mode;
-        _address_extension_len = 1;
-    } else {
-        throw std::range_error("addressing mode is invalid");
-    }
-
+    _addressing_mode = addressing_mode;
     _fc_wait_max = max_fc_wait_frames;
+
     reset();
 }
 
@@ -146,10 +136,8 @@ uint8_t isotp::get_address_extension(void) {
     return _address_extension;
 }
 
-void isotp::set_address_extension(const std::uint8_t  address_extension,
-                                  const int           address_extension_len) {
+void isotp::set_address_extension(const std::uint8_t  address_extension) {
     _address_extension = address_extension;
-    _address_extension_len = address_extension_len;
 }
 
 int isotp::process_sf(std::uint8_t*  buf_p,
@@ -166,7 +154,7 @@ int isotp::process_sf(std::uint8_t*  buf_p,
     std::uint8_t*  dp = &(_can_frame[0]);
     int            offset = 0;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         dp++;  // to get past the AE
         offset = 1;
     }
@@ -176,8 +164,8 @@ int isotp::process_sf(std::uint8_t*  buf_p,
         return -EBADMSG;
     }
 
-    if (extended_addressing_mode(_addressing_mode)) {
-        set_address_extension(_can_frame[0], 1);
+    if (extended_addressing_mode()) {
+        set_address_extension(_can_frame[0]);
     }
 
     if (_can_frame_len <= 8) {
@@ -229,7 +217,7 @@ int isotp::process_ff(std::uint8_t*  buf_p,
     std::uint8_t*  dp = &(_can_frame[0]);
     int            offset = 0;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         dp++;  // to get past the AE
         offset = 1;
     }
@@ -239,8 +227,8 @@ int isotp::process_ff(std::uint8_t*  buf_p,
         return -EBADMSG;
     }
 
-    if (extended_addressing_mode(_addressing_mode)) {
-        set_address_extension(_can_frame[0], 1);
+    if (extended_addressing_mode()) {
+        set_address_extension(_can_frame[0]);
     }
 
     if ((*dp & 0xf0) > 0) {
@@ -308,7 +296,7 @@ int isotp::process_cf(std::uint8_t*  buf_p,
     std::uint8_t*  dp = _can_frame;
     int            offset = 0;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         dp++;  // to get past the AE
         offset = 1;
     }
@@ -327,8 +315,8 @@ int isotp::process_cf(std::uint8_t*  buf_p,
     _sequence_num++;
     _sequence_num &= 0x0000000fU;
 
-    if (extended_addressing_mode(_addressing_mode)) {
-        set_address_extension(_can_frame[0], 1);
+    if (extended_addressing_mode()) {
+        set_address_extension(_can_frame[0]);
     }
 
     dp++;  // move past the CF PCI
@@ -351,8 +339,8 @@ int isotp::process_cf(std::uint8_t*  buf_p,
 int isotp::process_fc(void) {
     std::uint8_t*  dp = _can_frame;
 
-    if (extended_addressing_mode(_addressing_mode)) {
-        set_address_extension((*dp++), 1);
+    if (extended_addressing_mode()) {
+        set_address_extension((*dp++));
     }
 
     switch ((*dp++)) {
@@ -415,7 +403,7 @@ int isotp::generate_sf(const std::uint8_t*  buf_p,
     reset();
     std::uint8_t* dp = &(_can_frame[0]);
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         *dp = _address_extension;
         dp++;
         _can_frame_len++;
@@ -458,7 +446,12 @@ int isotp::generate_ff(const std::uint8_t*  buf_p,
         throw std::invalid_argument("buffer length invalid");
     }
 
-    int ff_dlmin = _can_max_datalen - _address_extension_len;
+    // determine the minimum FF_DL length adjusting for the
+    // CAN frame format, and whether extended addressing is used
+    int ff_dlmin = _can_max_datalen;
+    if (extended_addressing_mode()) {
+        ff_dlmin -= 1;
+    }
     if (_can_format == CANFD_FORMAT) {
         ff_dlmin -= 1;
     }
@@ -466,7 +459,7 @@ int isotp::generate_ff(const std::uint8_t*  buf_p,
     reset();
     std::uint8_t* dp = _can_frame;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         *dp = _address_extension;
         dp++;
         _can_frame_len++;
@@ -528,7 +521,7 @@ int isotp::generate_cf(const std::uint8_t*  buf_p,
 
     std::uint8_t*  dp = _can_frame;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         (*dp++) = _address_extension;
         _can_frame_len++;
     }
@@ -560,7 +553,7 @@ int isotp::generate_fc(void) {
 
     _can_frame_len = 0;
 
-    if (extended_addressing_mode(_addressing_mode)) {
+    if (extended_addressing_mode()) {
         (*dp++) = _address_extension;
         _can_frame_len++;
     }
@@ -612,4 +605,9 @@ int isotp::generate(const isotp_frame_type_t  frame_type,
         break;
     }
     return 0;
+}
+
+bool isotp::extended_addressing_mode(void) {
+    return ((_addressing_mode == ISOTP_EXTENDED_ADDRESSING_MODE) ||
+            (_addressing_mode == ISOTP_MIXED_ADDRESSING_MODE));
 }
