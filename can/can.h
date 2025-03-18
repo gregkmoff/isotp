@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
 #include <stdint.h>
 
 /**
@@ -135,3 +139,7 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format);
  *             the value of the DLC (>=0) for the data length is returned
  */
 int can_datalen_to_dlc(const int datalen, const can_format_t format);
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
