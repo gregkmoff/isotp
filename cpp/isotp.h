@@ -93,7 +93,8 @@ class isotp {
 
     int send(const std::uint8_t*  send_buf_p,
              const int            send_buf_len,
-             const std::uint64_t  timeout_usec);
+             const std::uint64_t  timeout_usec,
+             void*                context = nullptr);
 
     int receive(std::uint8_t*        recv_buf_p,
                 const int            recv_buf_sz,
@@ -108,6 +109,8 @@ class isotp {
 
     virtual int rx_f(void*                context,
                      const std::uint64_t  timeout_usec) = 0;
+
+    virtual int wait_f(const uint64_t usec) = 0;
 
     uint8_t get_address_extension(void);
     void set_address_extension(const std::uint8_t  address_extension);
@@ -167,4 +170,9 @@ class isotp {
     int generate_cf(const std::uint8_t*  buf_p,
                     const int            buf_len);
     int generate_fc(void);
+
+    int send_cfs(const std::uint8_t*  send_buf_p,
+                 const int            send_buf_len,
+                 const std::uint64_t  timeout_usec,
+                 void*                context);
 };

@@ -39,8 +39,17 @@ extern "C" {
 #define USEC_PER_MSEC (1000)
 #endif
 
+#define NSEC_PER_SEC  (1000000000)
+#define USEC_PER_SEC  (1000000)
+#define NSEC_PER_USEC (1000)
+
 #define MAX_STMIN (0x7f)
 #define MAX_STMIN_USEC (MAX_STMIN * USEC_PER_MSEC)
+
+static void usec_to_ts(struct timespec *ts, const uint64_t us) {
+    ts->tv_sec = us / USEC_PER_SEC;
+    ts->tv_nsec = (us % USEC_PER_SEC) * NSEC_PER_USEC;
+}
 
 static std::uint8_t fc_stmin_usec_to_parameter(const int stmin_usec) {
     uint8_t stmin_param = MAX_STMIN;  // ref ISO-15765-2:2016, section 9.6.5.5
@@ -107,10 +116,115 @@ isotp::isotp(const can_format_t             can_format,
     reset();
 }
 
+int isotp::send_cfs(const std::uint8_t*  send_buf_p,
+                    const int            send_buf_len,
+                    const std::uint64_t  timeout_usec,
+                    void*                context) {
+    uint8_t bs = _fs_blocksize;
+    int     rc = 0;
+
+    // @ref ISO-15765-2:2016, section 9.6.5.3, table 19
+    // if specified blocksize is 0, send continuously without FC
+
+    while ((_remaining_datalen > 0) && ((_fs_blocksize == 0) || bs > 0)) {
+        rc = generate_cf(send_buf_p, send_buf_len);
+        if (rc < 0) {
+            return rc;
+        }
+
+        rc = tx_f(context, timeout_usec);
+        if (rc < 0) {
+            return rc;
+        }
+
+        if (bs > 0) {
+            // prevent under-rolling
+            bs--;
+        }
+
+        // inter-frame gap (STMin)
+        (void)wait_f(_fs_stmin);
+    }
+
+    return rc;
+}
+
 int isotp::send(const std::uint8_t*  send_buf_p,
                 const int            send_buf_len,
-                const std::uint64_t  timeout_usec) {
-    return 0;
+                const std::uint64_t  timeout_usec,
+                void*                context) {
+    if (send_buf_p == nullptr) {
+        throw std::invalid_argument("send buffer is null");
+    }
+
+    if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
+        throw std::range_error("send length is invalid");
+    }
+
+    int rc = 0;
+    reset();
+
+    if (send_buf_len <= _can_max_datalen) {
+        // will fit in an SF
+        rc = generate_sf(send_buf_p, send_buf_len);
+        if (rc >= 0) {
+            rc = tx_f(context, timeout_usec);
+        }
+    } else {
+        // send an FF and start the FC/CF sequence
+        rc = generate_ff(send_buf_p, send_buf_len);
+        if (rc < 0) {
+            return rc;
+        }
+
+        rc = tx_f(context, timeout_usec);
+        if (rc < 0) {
+            return rc;
+        }
+
+        while (_remaining_datalen > 0) {
+            rc = rx_f(context, timeout_usec);
+            if (rc < 0) {
+                return rc;
+            }
+
+            rc = process_fc();
+            if (rc < 0) {
+                return rc;
+            }
+
+            switch (_fs) {
+            case ISOTP_FC_FLOWSTATUS_CTS:
+            // send CFs
+            if ((rc = send_cfs(send_buf_p, send_buf_len,
+                               timeout_usec, context)) < 0) {
+                return rc;
+            }
+            break;
+
+            case ISOTP_FC_FLOWSTATUS_WAIT:
+            if (++_fc_wait_count > _fc_wait_max) {
+                // assume CTS
+                _fc_wait_count = 0;
+            } else {
+                // wait for another FC
+                (void)wait_f(_fs_stmin);
+                continue;
+            }
+            break;
+
+            case ISOTP_FC_FLOWSTATUS_OVFLW:
+            break;
+
+            default:
+            __builtin_unreachable();
+            throw std::runtime_error("unknown flowstatus");
+            break;
+            }
+        }
+    }
+
+    return rc;
 }
 
 int isotp::receive(std::uint8_t*        recv_buf_p,
