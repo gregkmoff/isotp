@@ -56,6 +56,12 @@
 #define FC_FS_OVFLW (0x02)
 
 // mocks
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
+    (void)header;
+    (void)buf;
+    (void)buf_len;
+}
+
 int pad_can_frame(uint8_t* buf, const int buf_len, const can_format_t format) {
     (void)buf;
     (void)buf_len;

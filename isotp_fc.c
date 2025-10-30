@@ -11,7 +11,7 @@
  * this list of conditions and the following disclaimer in the documentation and/or
  * other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -94,7 +93,6 @@ int parse_fc(isotp_ctx_t ctx,
     default:
         // invalid FS
         // @ref ISO-15765-2:2016, section 9.6.5.2
-assert(0);
         return -EBADMSG;
     }
 
@@ -147,9 +145,6 @@ int prepare_fc(isotp_ctx_t ctx,
         break;
 
     default:
-        #ifdef DEBUG
-        assert(0);
-        #endif  // DEBUG
         return -EFAULT;
     }
     ctx->can_frame_len++;
@@ -202,13 +197,6 @@ uint8_t fc_stmin_usec_to_parameter(const int stmin_usec) {
         stmin_param = MAX_STMIN;
     }
 
-    // make sure the parameter isn't a reserved value
-    // 0x80-0xf0, 0xfa-0xff reserved
-    #ifdef DEBUG
-    assert(((stmin_param >= 0x00) && (stmin_param <= MAX_STMIN)) ||
-           ((stmin_param >= 0xf1) && (stmin_param <= 0xf9)));
-    #endif  // DEBUG
-
     return stmin_param;
 }
 
@@ -226,12 +214,6 @@ int fc_stmin_parameter_to_usec(const uint8_t stmin_param) {
         // ref ISO-15765-2:2016, section 9.6.5.5
         stmin_usec = MAX_STMIN_USEC;
     }
-
-    // make sure the returned value is within the 0-127ms range
-    #ifdef DEBUG
-    assert(stmin_usec >= 0);
-    assert(stmin_usec <= MAX_STMIN_USEC);
-    #endif  // DEBUG
 
     return stmin_usec;
 }

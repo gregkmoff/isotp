@@ -41,6 +41,12 @@
 #define NUM_ELEMS(a) (sizeof(a)/sizeof 0[a])
 
 // mocks
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
+    (void)header;
+    (void)buf;
+    (void)buf_len;
+}
+
 int can_max_datalen(const can_format_t format) {
     (void)format;
     return (int)mock();

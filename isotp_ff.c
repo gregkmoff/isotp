@@ -11,7 +11,7 @@
  * this list of conditions and the following disclaimer in the documentation and/or
  * other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,7 +69,6 @@ int parse_ff(isotp_ctx_t ctx,
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
-assert(0);
         return -ERANGE;
     }
 
@@ -84,7 +82,6 @@ assert(0);
 
     // make sure this is an FF_PCI
     if ((*sp & PCI_MASK) != FF_PCI) {
-assert(0);
         return -EBADMSG;
     }
 
@@ -124,7 +121,6 @@ assert(0);
     if (ff_dl < ff_dlmin) {
         // ignore this frame
         // @ref ISO-15765-2:2016, section 9.6.3.2
-assert(0);
         return -EBADMSG;
     }
 
@@ -253,7 +249,6 @@ int prepare_ff(isotp_ctx_t ctx,
     } else if ((send_buf_len >= 4096) && (send_buf_len <= MAX_TX_DATALEN)) {
         return prepare_ff_with_esc(ctx, send_buf_p, send_buf_len);
     } else {
-assert(0);
         return -ERANGE;
     }
 }

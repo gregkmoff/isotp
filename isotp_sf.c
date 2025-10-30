@@ -11,7 +11,7 @@
  * this list of conditions and the following disclaimer in the documentation and/or
  * other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -126,21 +125,18 @@ int parse_sf(isotp_ctx_t ctx,
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
-assert(0);
         return -ERANGE;
     }
 
     // verify the length of the CAN frame
     if ((ctx->can_frame_len < 0) ||
         (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT))) {
-assert(0);
         return -EBADMSG;
     }
 
     // verify that the frame contains an ISOTP SF header
     if ((ctx->can_frame[ctx->address_extension_len] & PCI_MASK) != SF_PCI) {
         // not an SF
-assert(0);
         return -EBADMSG;
     }
 
@@ -180,7 +176,6 @@ int prepare_sf(isotp_ctx_t ctx,
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
-assert(0);
         return -ERANGE;
     }
 

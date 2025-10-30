@@ -42,6 +42,12 @@
 #define NUM_ELEMS(a) (sizeof(a)/sizeof 0[a])
 
 // mocks
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
+    (void)header;
+    (void)buf;
+    (void)buf_len;
+}
+
 int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     (void)addr_mode;
     return (int)mock();
@@ -110,7 +116,8 @@ static void parse_cf_invalid_pci(void** state) {
 
     will_return(address_extension_len, 0);
     ctx->can_frame[0] = ~CF_PCI;
-    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -EBADMSG);
+    // not a CF == ignore, returns 0 (no data copied)
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == 0);
 
     free(ctx);
 }
