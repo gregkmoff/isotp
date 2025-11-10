@@ -27,19 +27,10 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include <isotp.h>
 #include <isotp_private.h>
-
-#define NSEC_PER_SEC  (1000000000)
-#define USEC_PER_SEC  (1000000)
-#define NSEC_PER_USEC (1000)
-
-static void usec_to_ts(struct timespec *ts, const uint64_t us) {
-    ts->tv_sec = us / USEC_PER_SEC;
-    ts->tv_nsec = (us % USEC_PER_SEC) * NSEC_PER_USEC;
-}
+#include <platform_sleep.h>
 
 static int send_sf(isotp_ctx_t ctx,
                    const uint8_t* send_buf_p,
@@ -93,10 +84,9 @@ static int send_cfs(isotp_ctx_t ctx,
         }
 
         // wait STmin
-        struct timespec stmin_ts = {0};
-        usec_to_ts(&stmin_ts, stmin_usec);
-        if (nanosleep(&stmin_ts, NULL) != 0) {
-            return -EFAULT;
+        int rc_sleep = platform_sleep_usec(stmin_usec);
+        if (rc_sleep != 0) {
+            return rc_sleep;
         }
     }
 

@@ -30,6 +30,7 @@ OBJS = isotp.o \
 	isotp_recv.o \
 	isotp_send.o \
 	isotp_sf.o \
+	platform_sleep.o \
 	can/can.o
 SRCS = isotp.c \
 	isotp_addressing.c \
@@ -40,6 +41,7 @@ SRCS = isotp.c \
 	isotp_recv.c \
 	isotp_send.c \
 	isotp_sf.c \
+	platform_sleep.c \
 	can/can.c
 UNIT_TESTS = can/can_ut.c
 

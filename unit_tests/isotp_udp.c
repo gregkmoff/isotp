@@ -37,6 +37,7 @@
 
 #include <can/can.h>
 #include <isotp.h>
+#include <platform_sleep.h>
 
 #define CLIENT (0)
 #define SERVER (1)
@@ -265,10 +266,7 @@ int main(int argc, char** argv) {
             rc = isotp_send(ctx, buf, sizeof(buf), 1000);
             printf("isotp_send() %d\n", rc);
             if (rc == (-1 * ETIMEDOUT)) {
-                struct timespec ts;
-                ts.tv_sec = 0;
-                ts.tv_nsec = 500000000;
-                nanosleep(&ts, NULL);
+                platform_sleep_usec(500000);
             }
             } while (rc < 0);
         }
