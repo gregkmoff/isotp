@@ -11,7 +11,7 @@
  * this list of conditions and the following disclaimer in the documentation and/or
  * other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
@@ -23,7 +23,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef ISOTP_PRIVATE_H
+#define ISOTP_PRIVATE_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -369,3 +370,5 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode);
 int max_sf_datalen(const isotp_ctx_t ctx);
 
 void printbuf(const char* header, const uint8_t* buf, const int buf_len);
+
+#endif  /* ISOTP_PRIVATE_H */
