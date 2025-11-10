@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "platform_sleep.h"
+#include <platform_sleep.h>
 
 #include <errno.h>
 

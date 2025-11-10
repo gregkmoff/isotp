@@ -89,8 +89,8 @@ int parse_cf(isotp_ctx_t ctx,
     // copy the incoming data into the receive buffer
     uint8_t* sp = &(ctx->can_frame[ae_l + 1]);  // starting after the PCI
     uint8_t* dp = &(recv_buf_p[ctx->total_datalen - ctx->remaining_datalen]);
-    int copy_len = MIN(ctx->can_frame_len - (ae_l + 1),
-                       ctx->remaining_datalen);
+    int copy_len = min_int(ctx->can_frame_len - (ae_l + 1),
+                           ctx->remaining_datalen);
     if (copy_len < 0) {
         return -EFAULT;
     }
@@ -151,8 +151,8 @@ int prepare_cf(isotp_ctx_t ctx,
     ctx->sequence_num &= 0x0000000fU;
 
     // copy the data
-    int copy_len = MIN(can_max_datalen(ctx->can_format) - ctx->can_frame_len,
-                       ctx->remaining_datalen);
+    int copy_len = min_int(can_max_datalen(ctx->can_format) - ctx->can_frame_len,
+                           ctx->remaining_datalen);
     memcpy(dp, sp, copy_len);
     ctx->can_frame_len += copy_len;
 

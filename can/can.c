@@ -45,9 +45,24 @@
 #define CAN_MAX_DLC (8)
 #define CANFD_MAX_DLC (15)
 
-#ifndef MAX
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#endif  // MAX
+/**
+ * @brief Return the maximum of two integer values
+ *
+ * MISRA-compliant inline function replacing macro
+ *
+ * @param x - first value
+ * @param y - second value
+ * @return maximum of x and y
+ */
+static inline int max_int(int x, int y) {
+    int result;
+    if (x > y) {
+        result = x;
+    } else {
+        result = y;
+    }
+    return result;
+}
 
 #ifndef NUM_ENTRIES
 #define NUM_ENTRIES(x) (sizeof(x) / sizeof((x)[0]))
@@ -152,7 +167,7 @@ static int pad_can_frame_internal(uint8_t* buf,
     if (expected_len < 0) {
         return expected_len;
     }
-    expected_len = MAX(expected_len, CAN_MAX_DATALEN);
+    expected_len = max_int(expected_len, CAN_MAX_DATALEN);
 
     // pad if the expected length (based on the DLC) is longer
     // than the length of the data

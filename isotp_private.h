@@ -104,14 +104,43 @@ enum isotp_fc_flowstatus_e {
 };
 typedef enum isotp_fc_flowstatus_e isotp_fc_flowstatus_t;
 
-#define MAX(a, b) \
-    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-       _a > _b ? _a : _b; })
-#define MIN(a, b) \
-    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-       _a < _b ? _a : _b; })
+/**
+ * @brief Return the maximum of two integer values
+ *
+ * MISRA-compliant inline function replacing GCC-specific macro
+ *
+ * @param a - first value
+ * @param b - second value
+ * @return maximum of a and b
+ */
+static inline int max_int(int a, int b) {
+    int result;
+    if (a > b) {
+        result = a;
+    } else {
+        result = b;
+    }
+    return result;
+}
+
+/**
+ * @brief Return the minimum of two integer values
+ *
+ * MISRA-compliant inline function replacing GCC-specific macro
+ *
+ * @param a - first value
+ * @param b - second value
+ * @return minimum of a and b
+ */
+static inline int min_int(int a, int b) {
+    int result;
+    if (a < b) {
+        result = a;
+    } else {
+        result = b;
+    }
+    return result;
+}
 
 /**
  * @brief process an incoming CAN frame as an ISOTP SF

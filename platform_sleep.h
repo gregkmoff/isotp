@@ -23,8 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORM_SLEEP_H
-#define PLATFORM_SLEEP_H
+#pragma once
 
 #include <stdint.h>
 
@@ -37,5 +36,3 @@
  * @return 0 on success, negative errno value on error
  */
 int platform_sleep_usec(uint64_t usec);
-
-#endif  // PLATFORM_SLEEP_H

@@ -131,7 +131,7 @@ int parse_ff(isotp_ctx_t ctx,
     }
 
     // copy the data into the receive buffer
-    int copy_len = MIN(ctx->can_frame_len, ff_dl);
+    int copy_len = min_int(ctx->can_frame_len, ff_dl);
     memcpy(recv_buf_p, sp, copy_len);
 
     ctx->total_datalen = ff_dl;
