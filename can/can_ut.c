@@ -1,5 +1,5 @@
 /**
- * Copyright 2024, Greg Moffatt (Greg.Moffatt@gmail.com)
+ * Copyright 2024-2025, Greg Moffatt (Greg.Moffatt@gmail.com)
  * 
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
