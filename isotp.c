@@ -38,6 +38,7 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
                    const can_format_t can_format,
                    const isotp_addressing_mode_t isotp_addressing_mode,
                    const uint8_t max_fc_wait_frames,
+                   const isotp_timeout_config_t* timeouts,
                    void* can_ctx,
                    isotp_rx_f can_rx_f,
                    isotp_tx_f can_tx_f) {
@@ -92,6 +93,17 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
 
     (*ctx)->fc_wait_max = max_fc_wait_frames;
 
+    // Initialize timeouts with defaults or user-provided values
+    if (timeouts != NULL) {
+        (*ctx)->timeouts.n_as = (timeouts->n_as > 0) ? timeouts->n_as : 1000000;
+        (*ctx)->timeouts.n_ar = (timeouts->n_ar > 0) ? timeouts->n_ar : 1000000;
+        (*ctx)->timeouts.n_bs = (timeouts->n_bs > 0) ? timeouts->n_bs : 1000000;
+        (*ctx)->timeouts.n_cr = (timeouts->n_cr > 0) ? timeouts->n_cr : 1000000;
+    } else {
+        // Use ISO-15765-2:2016 default values (1000ms)
+        (*ctx)->timeouts = isotp_default_timeouts();
+    }
+
     (*ctx)->can_ctx = can_ctx;
     (*ctx)->can_rx_f = can_rx_f;
     (*ctx)->can_tx_f = can_tx_f;
@@ -114,7 +126,8 @@ int isotp_ctx_reset(isotp_ctx_t ctx) {
     ctx->remaining_datalen = 0;
     ctx->fs_blocksize = 0;
     ctx->fs_stmin = 0;
-    ctx->timestamp_us = 0;
+    ctx->timer_start_us = 0;
+    ctx->last_fc_wait_time = 0;
     ctx->fc_wait_count = 0;
 
     return EOK;

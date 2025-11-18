@@ -34,6 +34,12 @@
  * Implementation of the ISOTP protocol used for Unified Diagnostic Services.
  */
 
+#define NSEC_PER_USEC (1000)
+#define USEC_PER_MSEC (1000)
+#define MSEC_PER_SEC  (1000)
+#define NSEC_PER_SEC  (1000000000)
+#define USEC_PER_SEC  (1000000)
+
 typedef struct isotp_ctx_s* isotp_ctx_t;
 
 /**
@@ -71,6 +77,45 @@ enum isotp_addressing_mode_e {
     LAST_ISOTP_ADDRESSING_MODE
 };
 typedef enum isotp_addressing_mode_e isotp_addressing_mode_t;
+
+/**
+ * @brief ISO-TP protocol timeout configuration
+ * @ref ISO-15765-2:2016, section 9.7, table 16
+ *
+ * All timeout values are in microseconds.
+ * Pass 0 to use default value (1000ms = 1000000us for all timers).
+ */
+typedef struct {
+    uint64_t n_as;  // Timeout for sender waiting for FC after FF (default: 1000ms)
+    uint64_t n_ar;  // Timeout for receiver waiting for CF after FF (default: 1000ms)
+    uint64_t n_bs;  // Timeout between consecutive FC.WAIT frames (default: 1000ms)
+    uint64_t n_cr;  // Timeout for receiver between CF frames (default: 1000ms)
+} isotp_timeout_config_t;
+
+#define ISOTP_DEFAULT_N_AS_USEC  (USEC_PER_SEC)
+#define ISOTP_DEFAULT_N_AR_USEC  (USEC_PER_SEC)
+#define ISOTP_DEFAULT_N_BS_USEC  (USEC_PER_SEC)
+#define ISOTP_DEFAULT_N_CR_USEC  (USEC_PER_SEC)
+
+/**
+ * @brief Get default ISO-TP timeout configuration
+ *
+ * Returns a configuration with all standard-compliant default values:
+ * - N_As = 1000ms (1000000us)
+ * - N_Ar = 1000ms (1000000us)
+ * - N_Bs = 1000ms (1000000us)
+ * - N_Cr = 1000ms (1000000us)
+ *
+ * @returns isotp_timeout_config_t structure with default values
+ */
+static inline isotp_timeout_config_t isotp_default_timeouts(void) {
+    isotp_timeout_config_t timeouts;
+    timeouts.n_as = ISOTP_DEFAULT_N_AS_USEC;
+    timeouts.n_ar = ISOTP_DEFAULT_N_AR_USEC;
+    timeouts.n_bs = ISOTP_DEFAULT_N_BS_USEC;
+    timeouts.n_cr = ISOTP_DEFAULT_N_CR_USEC;
+    return timeouts;
+}
 
 /**
  * @brief type definition of a function used to receive a CAN frame containing ISOTP data
@@ -122,6 +167,7 @@ typedef int (*isotp_tx_f)(void* txfn_ctx,
  * @param isotp_addressing_mode - what ISOTP addressing mode is used (see above)
  * @param max_fc_wait_frames - maximum number of FC.WAIT frames allowed
  *                             if set to zero, FC.WAIT frames are ignored
+ * @param timeouts - protocol timeout configuration (pass NULL for defaults)
  * @param can_ctx - opaque context passed to transmit/receive CAN frame function
  *                  (user provided, unrelated to the ctx parameter above)
  * @param can_rx_f - function invoked to receive a CAN frame
@@ -134,6 +180,7 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
                    const can_format_t can_format,
                    const isotp_addressing_mode_t isotp_addressing_mode,
                    const uint8_t max_fc_wait_frames,
+                   const isotp_timeout_config_t* timeouts,
                    void* can_ctx,
                    isotp_rx_f can_rx_f,
                    isotp_tx_f can_tx_f);

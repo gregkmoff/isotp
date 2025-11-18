@@ -23,19 +23,55 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORM_SLEEP_H
-#define PLATFORM_SLEEP_H
+#include <platform_time.h>
 
-#include <stdint.h>
+#include <isotp.h>
 
-/**
- * Platform-independent sleep function
- *
- * Suspends execution for the specified duration in microseconds.
- *
- * @param usec Duration to sleep in microseconds
- * @return 0 on success, negative errno value on error
- */
-int platform_sleep_usec(uint64_t usec);
+#include <errno.h>
 
-#endif  /* PLATFORM_SLEEP_H */
+#if defined(_WIN32) || defined(_WIN64)
+// Windows implementation
+#include <windows.h>
+
+int platform_sleep_usec(uint64_t usec) {
+    // Convert microseconds to milliseconds for Sleep()
+    // Note: Sleep() has millisecond resolution on Windows
+    DWORD msec = (DWORD)((usec + 999) / 1000);  // Round up
+    Sleep(msec);
+    return 0;
+}
+
+uint64_t platform_gettime(void) {
+    // TODO: implement
+    return UINT64_MAX;
+}
+
+#else
+// POSIX implementation (Linux, macOS, BSD, etc.)
+#include <time.h>
+#include <sys/time.h>
+
+int platform_sleep_usec(uint64_t usec) {
+    struct timespec ts;
+    ts.tv_sec = usec / USEC_PER_SEC;
+    ts.tv_nsec = (usec % USEC_PER_SEC) * NSEC_PER_USEC;
+
+    if (nanosleep(&ts, NULL) != 0) {
+        return -errno;
+    }
+
+    return 0;
+}
+
+uint64_t platform_gettime(void) {
+    struct timeval tv = {0};
+    uint64_t rc = UINT64_MAX;
+
+    if (gettimeofday(&tv, NULL) == 0) {
+        rc = tv.tv_sec * USEC_PER_SEC + tv.tv_usec;
+    }
+
+    return rc;
+}
+
+#endif

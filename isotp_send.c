@@ -30,7 +30,7 @@
 
 #include <isotp.h>
 #include <isotp_private.h>
-#include <platform_sleep.h>
+#include <platform_time.h>
 
 static int send_sf(isotp_ctx_t ctx,
                    const uint8_t* send_buf_p,
@@ -115,7 +115,23 @@ static int send_ff(isotp_ctx_t ctx,
         return rc;
     }
 
+    // Reset FC.WAIT counter for this transmission
+    ctx->fc_wait_count = 0;
+
+    // Start N_As timer for waiting for first FC after FF
+    // @ref ISO-15765-2:2016, section 9.7, table 16
+    timeout_start(ctx);
+
     while (ctx->remaining_datalen > 0) {
+        // Check if N_As or N_Bs timeout has expired
+        // N_As applies to first FC, N_Bs applies between FC.WAIT frames
+        uint64_t applicable_timeout = (ctx->fc_wait_count == 0) ?
+                                      ctx->timeouts.n_as : ctx->timeouts.n_bs;
+
+        if (timeout_expired(ctx, applicable_timeout)) {
+            return -ETIMEDOUT;
+        }
+
         // wait for FC
         rc = (*(ctx->can_rx_f))(ctx->can_ctx,
                                 ctx->can_frame,
@@ -142,10 +158,27 @@ static int send_ff(isotp_ctx_t ctx,
                 if (rc < 0) {
                     return rc;
                 }
+                // Reset FC.WAIT counter after successful CTS
+                ctx->fc_wait_count = 0;
+
+                // Restart timer for next FC if more data remains
+                if (ctx->remaining_datalen > 0) {
+                    timeout_start(ctx);
+                }
                 break;
 
             case ISOTP_FC_FLOWSTATUS_WAIT:
-                // go back and wait for a CTS
+                // @ref ISO-15765-2:2016, section 9.6.5.1
+                // Increment FC.WAIT counter and check against maximum
+                ctx->fc_wait_count++;
+
+                // Enforce maximum FC.WAIT frames if configured
+                if ((ctx->fc_wait_max > 0) && (ctx->fc_wait_count > ctx->fc_wait_max)) {
+                    return -ECONNABORTED;
+                }
+
+                // Restart N_Bs timer for next FC.WAIT
+                timeout_start(ctx);
                 continue;
                 break;
 

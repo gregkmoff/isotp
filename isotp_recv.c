@@ -37,6 +37,11 @@ static int recv_cfs(isotp_ctx_t ctx,
                     const int stmin_usec,
                     const uint64_t timeout) {
     int rc = EOK;
+
+    // Start N_Cr timer for waiting for first CF after FF
+    // @ref ISO-15765-2:2016, section 9.7, table 16
+    timeout_start(ctx);
+
     while (ctx->remaining_datalen > 0) {
         rc = prepare_fc(ctx,
                         ISOTP_FC_FLOWSTATUS_CTS,
@@ -54,10 +59,18 @@ static int recv_cfs(isotp_ctx_t ctx,
             return rc;
         }
 
+        // Restart N_Cr timer after sending FC
+        timeout_start(ctx);
+
         uint8_t bs = blocksize;
 
         while ((ctx->remaining_datalen > 0) &&
                ((blocksize == 0) || (bs > 0))) {
+            // Check if N_Cr timeout has expired waiting for CF
+            if (timeout_expired(ctx, ctx->timeouts.n_cr)) {
+                return -ETIMEDOUT;
+            }
+
             rc = (*(ctx->can_rx_f))(ctx->can_ctx,
                                     ctx->can_frame,
                                     sizeof(ctx->can_frame),
@@ -75,6 +88,9 @@ static int recv_cfs(isotp_ctx_t ctx,
             if (rc < 0) {
                 return rc;
             }
+
+            // Restart N_Cr timer after successfully receiving CF
+            timeout_start(ctx);
 
             if (bs > 0) {
                 bs--;

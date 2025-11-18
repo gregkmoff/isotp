@@ -30,6 +30,7 @@
 #include <stdint.h>
 
 #include <can/can.h>
+#include <platform_time.h>
 #include <isotp.h>
 
 /**
@@ -71,7 +72,14 @@ struct isotp_ctx_s {
                                 // or mixed ISOTP addressing modes
     int address_extension_len;
 
-    uint64_t wait_interval_us;
+    /**
+     * @brief Protocol timing parameters
+     * @ref ISO-15765-2:2016, section 9.7, table 16
+     */
+    isotp_timeout_config_t timeouts;
+
+    uint64_t timer_start_us;      // Timer start timestamp for timeout checking
+    uint64_t last_fc_wait_time;   // Timestamp of last FC.WAIT received
 
     int total_datalen;
     int remaining_datalen;
@@ -79,8 +87,6 @@ struct isotp_ctx_s {
 
     uint8_t fs_blocksize;  // blocksize from the last FC
     uint64_t fs_stmin;     // CF gap, STmin in usec
-
-    uint64_t timestamp_us;
 
     void* can_ctx;
     isotp_rx_f can_rx_f;
@@ -317,7 +323,50 @@ uint8_t fc_stmin_usec_to_parameter(const int stmin_usec);
  */
 int fc_stmin_parameter_to_usec(const uint8_t stmin_param);
 
-uint64_t get_time(void);
+/**
+ * @brief Start a timeout timer
+ *
+ * Records the current time for timeout checking
+ *
+ * @param ctx - ISOTP context
+ */
+static inline void timeout_start(isotp_ctx_t ctx) {
+    if (ctx != NULL) {
+        ctx->timer_start_us = platform_gettime();
+    }
+}
+
+/**
+ * @brief Check if a timeout has occurred
+ *
+ * @param ctx - ISOTP context
+ * @param timeout_us - timeout duration in microseconds
+ *
+ * @returns
+ * true if timeout has occurred
+ * false if timeout has not occurred
+ */
+static inline bool timeout_expired(isotp_ctx_t ctx, uint64_t timeout_us) {
+    if ((ctx == NULL) || (timeout_us == 0)) {
+        return false;
+    }
+    uint64_t elapsed = platform_gettime() - ctx->timer_start_us;
+    return elapsed >= timeout_us;
+}
+
+/**
+ * @brief Get elapsed time since timer was started
+ *
+ * @param ctx - ISOTP context
+ *
+ * @returns elapsed time in microseconds
+ */
+static inline uint64_t timeout_elapsed(isotp_ctx_t ctx) {
+    if (ctx == NULL) {
+        return 0;
+    }
+    return platform_gettime() - ctx->timer_start_us;
+}
 
 /**
  * @brief return a pointer to the start of the ISOTP frame data, excluding the address extension

@@ -42,10 +42,6 @@
 #define FC_FS_WAIT (0x01)
 #define FC_FS_OVFLW (0x02)
 
-#ifndef USEC_PER_MSEC
-#define USEC_PER_MSEC (1000)
-#endif
-
 #define MAX_STMIN (0x7f)
 #define MAX_STMIN_USEC (MAX_STMIN * USEC_PER_MSEC)
 

@@ -90,7 +90,7 @@ int get_isotp_address_extension(const isotp_ctx_t ctx) {
     return (int)mock();
 }
 
-uint64_t get_time(void) {
+uint64_t platform_gettime(void) {
     return (uint64_t)mock();
 }
 

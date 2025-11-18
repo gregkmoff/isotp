@@ -23,40 +23,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <platform_sleep.h>
+#ifndef PLATFORM_SLEEP_H
+#define PLATFORM_SLEEP_H
 
-#include <errno.h>
+#include <stdint.h>
 
-#if defined(_WIN32) || defined(_WIN64)
-// Windows implementation
-#include <windows.h>
+/**
+ * Platform-independent sleep function
+ *
+ * Suspends execution for the specified duration in microseconds.
+ *
+ * @param usec Duration to sleep in microseconds
+ * @return 0 on success, negative errno value on error
+ */
+int platform_sleep_usec(uint64_t usec);
 
-int platform_sleep_usec(uint64_t usec) {
-    // Convert microseconds to milliseconds for Sleep()
-    // Note: Sleep() has millisecond resolution on Windows
-    DWORD msec = (DWORD)((usec + 999) / 1000);  // Round up
-    Sleep(msec);
-    return 0;
-}
+/**
+ * Platform-independent get time function
+ *
+ * Returns monotonic clock time in microseconds.
+ *
+ * @return 
+ */
+uint64_t platform_gettime(void);
 
-#else
-// POSIX implementation (Linux, macOS, BSD, etc.)
-#include <time.h>
-
-#define NSEC_PER_SEC  (1000000000)
-#define USEC_PER_SEC  (1000000)
-#define NSEC_PER_USEC (1000)
-
-int platform_sleep_usec(uint64_t usec) {
-    struct timespec ts;
-    ts.tv_sec = usec / USEC_PER_SEC;
-    ts.tv_nsec = (usec % USEC_PER_SEC) * NSEC_PER_USEC;
-
-    if (nanosleep(&ts, NULL) != 0) {
-        return -errno;
-    }
-
-    return 0;
-}
-
-#endif
+#endif  /* PLATFORM_SLEEP_H */
