@@ -43,7 +43,8 @@ int platform_sleep_usec(uint64_t usec);
  *
  * Returns monotonic clock time in microseconds.
  *
- * @return 
+ * @return Current time in microseconds since an arbitrary epoch.
+ *         Returns UINT64_MAX on error (e.g., if system time is unavailable).
  */
 uint64_t platform_gettime(void);
 
