@@ -42,8 +42,19 @@ int platform_sleep_usec(uint64_t usec) {
 }
 
 uint64_t platform_gettime(void) {
-    // TODO: implement
-    return UINT64_MAX;
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER counter;
+
+    if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart == 0) {
+        return UINT64_MAX;
+    }
+
+    if (!QueryPerformanceCounter(&counter)) {
+        return UINT64_MAX;
+    }
+
+    // Convert to microseconds
+    return (uint64_t)((counter.QuadPart * USEC_PER_SEC) / frequency.QuadPart);
 }
 
 #else
