@@ -66,7 +66,6 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
             free(*ctx);
             *ctx = NULL;
             return -EFAULT;
-            break;
     }
 
     switch (isotp_addressing_mode) {
@@ -88,7 +87,6 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
             free(*ctx);
             *ctx = NULL;
             return -EFAULT;
-            break;
     }
 
     (*ctx)->fc_wait_max = max_fc_wait_frames;

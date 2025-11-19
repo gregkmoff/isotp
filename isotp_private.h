@@ -168,7 +168,7 @@ static inline int min_int(int a, int b) {
 int receive_sf(isotp_ctx_t ctx,
                uint8_t* recv_buf_p,
                const int recv_buf_sz,
-               const uint64_t timeout_us __attribute__((unused)));
+               const uint64_t timeout_us);
 
 /**
  * @brief prepare an ISOTP Flow Control (FC) CAN frame

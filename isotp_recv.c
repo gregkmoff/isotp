@@ -152,7 +152,6 @@ int isotp_recv(isotp_ctx_t ctx,
         case FC_PCI:
         default:
             return -ENOMSG;
-            break;
     }
 
     if (rc < 0) {

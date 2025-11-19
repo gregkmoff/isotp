@@ -54,13 +54,11 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
         // no address extension byte
         return 0;
-        break;
 
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
         // one leading address extension byte
         return 1;
-        break;
 
     case NULL_ISOTP_ADDRESSING_MODE:
     case LAST_ISOTP_ADDRESSING_MODE:

@@ -50,8 +50,10 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
         sf_dl = ctx->can_frame[1];
-        if (((sf_dl >= 0) && (sf_dl <= 7)) ||
-            (sf_dl > (ctx->can_frame_len - 2))) {
+        /* MISRA Rule 14.4: Check for valid SF_DL range with escape sequence */
+        /* For escape sequence, SF_DL must be >= 8 */
+        if ((sf_dl <= 7U) ||
+            (sf_dl > (uint8_t)(ctx->can_frame_len - 2))) {
             return -ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[2]);
@@ -61,8 +63,10 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
         sf_dl = ctx->can_frame[2];
-        if (((sf_dl >= 0) && (sf_dl <= 6)) ||
-            (sf_dl > (ctx->can_frame_len - 3))) {
+        /* MISRA Rule 14.4: Check for valid SF_DL range with escape sequence */
+        /* For escape sequence, SF_DL must be >= 7 */
+        if ((sf_dl <= 6U) ||
+            (sf_dl > (uint8_t)(ctx->can_frame_len - 3))) {
             return -ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[3]);
@@ -72,7 +76,6 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
 
     default:
         return -EFAULT;
-        break;
     }
 
     return (int)sf_dl;
@@ -91,7 +94,8 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
         sf_dl = ctx->can_frame[0] & SF_DL_PCI_MASK;
-        if ((sf_dl == 0) || (sf_dl > 7)) {
+        /* MISRA Rule 14.4: Check for valid SF_DL range (1-7 for no escape) */
+        if ((sf_dl == 0U) || (sf_dl > 7U)) {
             return -ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[1]);
@@ -101,7 +105,8 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
         sf_dl = ctx->can_frame[1] & SF_DL_PCI_MASK;
-        if ((sf_dl == 0) || (sf_dl > 6)) {
+        /* MISRA Rule 14.4: Check for valid SF_DL range (1-6 for no escape) */
+        if ((sf_dl == 0U) || (sf_dl > 6U)) {
             return -ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[2]);
@@ -111,7 +116,6 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
 
     default:
         return -EFAULT;
-        break;
     }
 
     return (int)sf_dl;
@@ -191,17 +195,18 @@ int prepare_sf(isotp_ctx_t ctx,
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
         if ((ctx->can_max_datalen <= 8) &&
-            (send_buf_len >= 0) &&
             (send_buf_len <= 7)) {
             // send as an SF with no escape sequence
-            ctx->can_frame[0] = SF_PCI | (uint8_t)(send_buf_len & 0x00000007U);
+            /* MISRA Rule 10.3: Explicit cast to ensure type consistency */
+            ctx->can_frame[0] = SF_PCI | ((uint8_t)send_buf_len & 0x07U);
             dp = &(ctx->can_frame[1]);
             ctx->can_frame_len += 1;
         } else if ((ctx->can_max_datalen > 8) &&
                    (send_buf_len >= 8) &&
                    (send_buf_len <= (ctx->can_max_datalen - 2))) {
             ctx->can_frame[0] = SF_PCI;
-            ctx->can_frame[1] = (uint8_t)(send_buf_len & 0x000000ffU);
+            /* MISRA Rule 10.3: Explicit cast to ensure type consistency */
+            ctx->can_frame[1] = (uint8_t)send_buf_len;
             dp = &(ctx->can_frame[2]);
             ctx->can_frame_len += 2;
         } else {
@@ -215,10 +220,10 @@ int prepare_sf(isotp_ctx_t ctx,
         ctx->can_frame_len += 1;
 
         if ((ctx->can_max_datalen <= 8) &&
-            (send_buf_len >= 0) &&
             (send_buf_len <= 6)) {
             // send as an SF with no escape sequence
-            ctx->can_frame[1] = SF_PCI | (uint8_t)(send_buf_len & 0x00000007U);
+            /* MISRA Rule 10.3: Explicit cast to ensure type consistency */
+            ctx->can_frame[1] = SF_PCI | ((uint8_t)send_buf_len & 0x07U);
             dp = &(ctx->can_frame[2]);
             ctx->can_frame_len += 1;
         } else if ((ctx->can_max_datalen > 8) &&
@@ -226,7 +231,8 @@ int prepare_sf(isotp_ctx_t ctx,
                    (send_buf_len <= (ctx->can_max_datalen - 3))) {
             // send as an SF with escape sequence
             ctx->can_frame[1] = SF_PCI;
-            ctx->can_frame[2] = (uint8_t)(send_buf_len & 0x000000ffU);
+            /* MISRA Rule 10.3: Explicit cast to ensure type consistency */
+            ctx->can_frame[2] = (uint8_t)send_buf_len;
             dp = &(ctx->can_frame[3]);
             ctx->total_datalen += 2;
             ctx->can_frame_len += 2;
@@ -237,7 +243,6 @@ int prepare_sf(isotp_ctx_t ctx,
 
     default:
         return -EFAULT;
-        break;
     }
 
     // copy the payload data and pad the CAN frame (if needed)

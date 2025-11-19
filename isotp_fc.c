@@ -138,7 +138,6 @@ int prepare_fc(isotp_ctx_t ctx,
     case ISOTP_FC_FLOWSTATUS_NULL:
     case ISOTP_FC_FLOWSTATUS_LAST:
         return -EINVAL;
-        break;
 
     default:
         return -EFAULT;

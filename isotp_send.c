@@ -180,17 +180,14 @@ static int send_ff(isotp_ctx_t ctx,
                 // Restart N_Bs timer for next FC.WAIT
                 timeout_start(ctx);
                 continue;
-                break;
 
             case ISOTP_FC_FLOWSTATUS_OVFLW:
                 return -ECONNABORTED;
-                break;
 
             case ISOTP_FC_FLOWSTATUS_NULL:
             case ISOTP_FC_FLOWSTATUS_LAST:
             default:
                 return -EBADMSG;
-                break;
         }
     }
 

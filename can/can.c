@@ -212,7 +212,6 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format) {
         } else {
             return -EINVAL;
         }
-        break;
 
     case CANFD_FORMAT:
         if (dlc <= CANFD_MAX_DLC) {
@@ -220,13 +219,11 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format) {
         } else {
             return -EINVAL;
         }
-        break;
 
     case NULL_CAN_FORMAT:
     case LAST_CAN_FORMAT:
     default:
         return -EINVAL;
-        break;
     }
 }
 
@@ -242,7 +239,6 @@ int can_datalen_to_dlc(const int datalen, const can_format_t format) {
         } else {
             return -EINVAL;
         }
-        break;
 
     case CANFD_FORMAT:
         if (datalen <= CANFD_MAX_DATALEN) {
@@ -250,12 +246,10 @@ int can_datalen_to_dlc(const int datalen, const can_format_t format) {
         } else {
             return -EINVAL;
         }
-        break;
 
     case NULL_CAN_FORMAT:
     case LAST_CAN_FORMAT:
     default:
         return -EINVAL;
-        break;
     }
 }

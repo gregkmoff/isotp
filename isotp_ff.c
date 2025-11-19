@@ -87,7 +87,8 @@ int parse_ff(isotp_ctx_t ctx,
 
     // get the FF_DL
     int ff_dl = 0;
-    ff_dl = (int)(*sp & 0x0fU) << 8;
+    /* MISRA Rule 10.3: Explicit cast and shift with proper type handling */
+    ff_dl = ((int)(*sp & 0x0fU)) << 8;
     sp++;
     (ctx->can_frame_len)--;
     ff_dl += (int)(*sp);
@@ -97,13 +98,14 @@ int parse_ff(isotp_ctx_t ctx,
     if (ff_dl == 0) {
         // FF has the escape == this is an FF with DL >= 4096
         // extract the next four bytes to get the FF_DL
-        ff_dl = (int)(*sp) << 24;
+        /* MISRA Rule 10.3: Multi-byte value construction with explicit types */
+        ff_dl = ((int)(*sp)) << 24;
         sp++;
         (ctx->can_frame_len)--;
-        ff_dl += (int)(*sp) << 16;
+        ff_dl += ((int)(*sp)) << 16;
         sp++;
         (ctx->can_frame_len)--;
-        ff_dl += (int)(*sp) << 8;
+        ff_dl += ((int)(*sp)) << 8;
         sp++;
         (ctx->can_frame_len)--;
         ff_dl += (int)(*sp);
@@ -158,10 +160,11 @@ static int prepare_ff_no_esc(isotp_ctx_t ctx,
     }
 
     // add the PCI and total length byte
-    (*dp) = (FF_PCI) | (uint8_t)((send_buf_len >> 8) & 0x000000ffU);
+    /* MISRA Rule 10.3: Explicit cast with proper type handling */
+    (*dp) = FF_PCI | ((uint8_t)((send_buf_len >> 8) & 0xffU));
     dp++;
     (ctx->can_frame_len)++;
-    (*dp) = (uint8_t)(send_buf_len & 0x000000ffU);
+    (*dp) = (uint8_t)(send_buf_len & 0xffU);
     dp++;
     (ctx->can_frame_len)++;
 
@@ -203,16 +206,17 @@ static int prepare_ff_with_esc(isotp_ctx_t ctx,
     (ctx->can_frame_len)++;
 
     // add the 4-byte total length
-    (*dp) = (uint8_t)((send_buf_len >> 24) & 0x000000ffU);
+    /* MISRA Rule 10.3: Explicit cast with proper type handling */
+    (*dp) = (uint8_t)((send_buf_len >> 24) & 0xffU);
     dp++;
     (ctx->can_frame_len)++;
-    (*dp) = (uint8_t)((send_buf_len >> 16) & 0x000000ffU);
+    (*dp) = (uint8_t)((send_buf_len >> 16) & 0xffU);
     dp++;
     (ctx->can_frame_len)++;
-    (*dp) = (uint8_t)((send_buf_len >> 8) & 0x000000ffU);
+    (*dp) = (uint8_t)((send_buf_len >> 8) & 0xffU);
     dp++;
     (ctx->can_frame_len)++;
-    (*dp) = (uint8_t)(send_buf_len & 0x000000ffU);
+    (*dp) = (uint8_t)(send_buf_len & 0xffU);
     dp++;
     (ctx->can_frame_len)++;
 
