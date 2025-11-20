@@ -103,6 +103,8 @@ test: $(UNIT_TESTS) $(OBJS)
 	${BUILD_DIR}/isotp_ff_ut
 	@$(CC) -I. -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
 	${BUILD_DIR}/isotp_sf_ut
+	@$(CC) -I. -o ${BUILD_DIR}/isotp_timeout_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c
+	${BUILD_DIR}/isotp_timeout_ut
 
 main_test: $(LIB)
 	$(CC) -I. -L${BUILD_DIR} -lc -lisotp unit_tests/main_test.c -o ${BUILD_DIR}/main_test
