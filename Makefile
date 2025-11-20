@@ -78,7 +78,7 @@ lib: setup $(SRCS) $(OBJS)
 	$(CC) -shared -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
 	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
 
-.PHONY : clean all lib test main_test
+.PHONY : clean all lib test main_test coverage
 
 clean :
 	@rm -rf ${BUILD_DIR}
@@ -90,6 +90,40 @@ lint: $(SRCS)
 .PHONY : debug
 debug: CFLAGS += -g -DDEBUG
 debug: lib
+
+.PHONY : coverage
+coverage: CFLAGS += -g -O0 --coverage -fprofile-arcs -ftest-coverage
+coverage: setup $(OBJS)
+	@echo "Building with code coverage instrumentation..."
+	$(eval GIT_TAG := $(shell git rev-parse --short HEAD))
+	@echo "...generating version $(GIT_TAG)"
+	$(CC) -shared --coverage -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
+	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
+	@echo "Building unit tests with coverage..."
+	$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_fc_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_ff_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_timeout_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c
+	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/platform_time_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/platform_time.o unit_tests/platform_time_ut.c
+	@echo ""
+	@echo "Running tests to generate coverage data..."
+	@${BUILD_DIR}/can_ut
+	@${BUILD_DIR}/isotp_cf_ut
+	@${BUILD_DIR}/isotp_fc_ut
+	@${BUILD_DIR}/isotp_ff_ut
+	@${BUILD_DIR}/isotp_sf_ut
+	@${BUILD_DIR}/isotp_timeout_ut
+	@${BUILD_DIR}/platform_time_ut
+	@echo ""
+	@echo "Generating coverage report..."
+	@cd ${BUILD_DIR} && gcov -o ${OBJ_DIR} $(addprefix ../,$(SRCS))
+	@echo ""
+	@echo "Coverage files generated. Use 'lcov' for HTML reports:"
+	@echo "  lcov --capture --directory ${OBJ_DIR} --output-file ${BUILD_DIR}/coverage.info"
+	@echo "  genhtml ${BUILD_DIR}/coverage.info --output-directory ${BUILD_DIR}/coverage_html"
 
 test: $(UNIT_TESTS) $(OBJS)
 	@$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
