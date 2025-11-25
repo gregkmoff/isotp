@@ -34,7 +34,7 @@
 #include <isotp.h>
 #include <isotp_private.h>
 
-int isotp_ctx_init(isotp_ctx_t* ctx,
+int isotp_ctx_init(isotp_ctx_t ctx,
                    const can_format_t can_format,
                    const isotp_addressing_mode_t isotp_addressing_mode,
                    const uint8_t max_fc_wait_frames,
@@ -48,70 +48,59 @@ int isotp_ctx_init(isotp_ctx_t* ctx,
         return -EINVAL;
     }
 
-    *ctx = calloc(1, sizeof(**ctx));
-    if (*ctx == NULL) {
-        return -ENOMEM;
-    }
+    (void)memset(ctx, 0, isotp_ctx_t_size());
 
     switch (can_format) {
         case CAN_FORMAT:
         case CANFD_FORMAT:
-            (*ctx)->can_format = can_format;
-            (*ctx)->can_max_datalen = can_max_datalen(can_format);
+            ctx->can_format = can_format;
+            ctx->can_max_datalen = can_max_datalen(can_format);
             break;
 
         case NULL_CAN_FORMAT:
         case LAST_CAN_FORMAT:
         default:
-            free(*ctx);
-            *ctx = NULL;
             return -EFAULT;
     }
 
     switch (isotp_addressing_mode) {
         case ISOTP_NORMAL_ADDRESSING_MODE:
         case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
-            (*ctx)->addressing_mode = isotp_addressing_mode;
-            (*ctx)->address_extension_len = 0;
+            ctx->addressing_mode = isotp_addressing_mode;
+            ctx->address_extension_len = 0;
             break;
 
         case ISOTP_EXTENDED_ADDRESSING_MODE:
         case ISOTP_MIXED_ADDRESSING_MODE:
-            (*ctx)->addressing_mode = isotp_addressing_mode;
-            (*ctx)->address_extension_len = 1;
+            ctx->addressing_mode = isotp_addressing_mode;
+            ctx->address_extension_len = 1;
             break;
 
         case NULL_ISOTP_ADDRESSING_MODE:
         case LAST_ISOTP_ADDRESSING_MODE:
         default:
-            free(*ctx);
-            *ctx = NULL;
             return -EFAULT;
     }
 
-    (*ctx)->fc_wait_max = max_fc_wait_frames;
+    ctx->fc_wait_max = max_fc_wait_frames;
 
     // Initialize timeouts with defaults or user-provided values
     if (timeouts != NULL) {
-        (*ctx)->timeouts.n_as = (timeouts->n_as > 0) ? timeouts->n_as : 1000000;
-        (*ctx)->timeouts.n_ar = (timeouts->n_ar > 0) ? timeouts->n_ar : 1000000;
-        (*ctx)->timeouts.n_bs = (timeouts->n_bs > 0) ? timeouts->n_bs : 1000000;
-        (*ctx)->timeouts.n_cr = (timeouts->n_cr > 0) ? timeouts->n_cr : 1000000;
+        ctx->timeouts.n_as = (timeouts->n_as > 0) ? timeouts->n_as : 1000000;
+        ctx->timeouts.n_ar = (timeouts->n_ar > 0) ? timeouts->n_ar : 1000000;
+        ctx->timeouts.n_bs = (timeouts->n_bs > 0) ? timeouts->n_bs : 1000000;
+        ctx->timeouts.n_cr = (timeouts->n_cr > 0) ? timeouts->n_cr : 1000000;
     } else {
         // Use ISO-15765-2:2016 default values (1000ms)
-        (*ctx)->timeouts = isotp_default_timeouts();
+        ctx->timeouts = isotp_default_timeouts();
     }
 
-    (*ctx)->can_ctx = can_ctx;
-    (*ctx)->can_rx_f = can_rx_f;
-    (*ctx)->can_tx_f = can_tx_f;
+    ctx->can_ctx = can_ctx;
+    ctx->can_rx_f = can_rx_f;
+    ctx->can_tx_f = can_tx_f;
 
     // finally, reset everything and set to the IDLE state
-    int rc = isotp_ctx_reset(*ctx);
-    if (rc < 0) {
-        free(*ctx);
-        *ctx = NULL;
-    }
+    int rc = isotp_ctx_reset(ctx);
     return rc;
 }
 
@@ -146,6 +135,10 @@ int set_isotp_address_extension(isotp_ctx_t ctx, const uint8_t ae) {
 
     ctx->address_extension = ae;
     return EOK;
+}
+
+size_t isotp_ctx_t_size(void) {
+    return sizeof(struct isotp_ctx_s);
 }
 
 void printbuf(const char* header, const uint8_t* buf, const int buf_len) {

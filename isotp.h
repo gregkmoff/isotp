@@ -26,6 +26,7 @@
 #ifndef ISOTP_H
 #define ISOTP_H
 
+#include <stddef.h>
 #include <can/can.h>
 
 /**
@@ -161,8 +162,7 @@ typedef int (*isotp_tx_f)(void* txfn_ctx,
  *
  * An ISOTP context needs to be initialized once before it is used.
  *
- * @param ctx - updated with pointer to an allocated isotp_ctx_t
- *              this context must be free'd when the caller is done with it
+ * @param ctx - pointer to a pre-allocated isotp_ctx_t
  * @param can_format - format of the CAN frames
  * @param isotp_addressing_mode - what ISOTP addressing mode is used (see above)
  * @param max_fc_wait_frames - maximum number of FC.WAIT frames allowed
@@ -176,7 +176,7 @@ typedef int (*isotp_tx_f)(void* txfn_ctx,
  * on success, 0.  The context is valid and allocated
  * otherwise (<0); return code indicating failure.  The context is invalid
  */
-int isotp_ctx_init(isotp_ctx_t* ctx,
+int isotp_ctx_init(isotp_ctx_t ctx,
                    const can_format_t can_format,
                    const isotp_addressing_mode_t isotp_addressing_mode,
                    const uint8_t max_fc_wait_frames,
@@ -266,5 +266,15 @@ int get_isotp_address_extension(const isotp_ctx_t ctx);
  * otherwise (<0) - error code
  */
 int set_isotp_address_extension(isotp_ctx_t ctx, const uint8_t ae);
+
+/**
+ * @brief get the size of an ISOTP context structure
+ *
+ * Returns the actual memory size of the isotp_ctx_t structure.
+ * Useful for memory allocation calculations, memory pool sizing, and debugging.
+ *
+ * @returns size of an isotp_ctx_t object in bytes
+ */
+size_t isotp_ctx_t_size(void);
 
 #endif  /* ISOTP_H */

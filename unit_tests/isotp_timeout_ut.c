@@ -105,7 +105,8 @@ static int mock_can_tx(void* txfn_ctx,
 static void test_n_as_timeout_on_ff_send(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     // Configure short N_As timeout
@@ -116,7 +117,7 @@ static void test_n_as_timeout_on_ff_send(void** state) {
         .n_cr = ISOTP_DEFAULT_N_CR_USEC
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            0,
@@ -153,7 +154,8 @@ static void test_n_as_timeout_on_ff_send(void** state) {
 static void test_n_bs_timeout_on_fc_wait(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     // Configure short N_Bs timeout
@@ -164,7 +166,7 @@ static void test_n_bs_timeout_on_fc_wait(void** state) {
         .n_cr = ISOTP_DEFAULT_N_CR_USEC
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            10,  // Allow FC.WAIT frames
@@ -206,7 +208,8 @@ static void test_n_bs_timeout_on_fc_wait(void** state) {
 static void test_n_cr_timeout_on_cf_wait(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     // Configure short N_Cr timeout
@@ -217,7 +220,7 @@ static void test_n_cr_timeout_on_cf_wait(void** state) {
         .n_cr = 100000  // 100ms
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            0,
@@ -256,7 +259,8 @@ static void test_n_cr_timeout_on_cf_wait(void** state) {
 static void test_fc_wait_within_n_bs_succeeds(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     // Configure reasonable timeout
@@ -267,7 +271,7 @@ static void test_fc_wait_within_n_bs_succeeds(void** state) {
         .n_cr = 500000
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            5,  // Allow up to 5 FC.WAIT frames
@@ -334,7 +338,8 @@ static void test_default_timeouts(void** state) {
 static void test_custom_timeouts(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     isotp_timeout_config_t custom_timeouts = {
@@ -344,7 +349,7 @@ static void test_custom_timeouts(void** state) {
         .n_cr = 200000   // 200ms
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            0,
@@ -369,10 +374,11 @@ static void test_custom_timeouts(void** state) {
 static void test_null_timeouts_use_defaults(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            0,
@@ -397,7 +403,8 @@ static void test_null_timeouts_use_defaults(void** state) {
 static void test_timeout_helpers(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
 
     // Test timeout_start
     timeout_start(ctx);
@@ -436,7 +443,8 @@ static void test_timeout_helpers(void** state) {
 static void test_n_as_to_n_bs_transition(void** state) {
     (void)state;
 
-    isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    assert_true(ctx != NULL);
     timeout_test_ctx_t test_ctx = {0};
 
     // Configure different N_As and N_Bs timeouts
@@ -447,7 +455,7 @@ static void test_n_as_to_n_bs_transition(void** state) {
         .n_cr = ISOTP_DEFAULT_N_CR_USEC
     };
 
-    int rc = isotp_ctx_init(&ctx,
+    int rc = isotp_ctx_init(ctx,
                            CAN_FORMAT,
                            ISOTP_NORMAL_ADDRESSING_MODE,
                            10,
