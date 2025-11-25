@@ -52,8 +52,8 @@ LINT_FLAGS = --filter=-readability/casting,-build/include_what_you_use
 BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
-REV=$(git rev-parse --short HEAD)
-CMOCKA_FLAGS=$(pkg-config --cflags --libs cmocka)
+REV=$(shell git rev-parse --short HEAD)
+CMOCKA_FLAGS=$(shell pkg-config --cflags --libs cmocka)
 LIB = ${BUILD_DIR}/libisotp.so
 
 default: all
@@ -100,7 +100,6 @@ coverage: setup $(OBJS)
 	$(CC) -shared --coverage -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
 	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
 	@echo "Building unit tests with coverage..."
-	$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
 	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
 	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
 	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_fc_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c
@@ -127,8 +126,7 @@ coverage: setup $(OBJS)
 	@echo "  lcov --capture --directory ${OBJ_DIR} --output-file ${BUILD_DIR}/coverage.info"
 	@echo "  genhtml ${BUILD_DIR}/coverage.info --output-directory ${BUILD_DIR}/coverage_html"
 
-test: $(UNIT_TESTS) $(OBJS)
-	@$(eval CMOCKA_FLAGS := $(shell pkg-config --cflags --libs cmocka))
+test: setup $(OBJS)
 	@$(CC) -I. -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
 	${BUILD_DIR}/can_ut
 	@$(CC) -I. -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
