@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: sudo apt-get update && sudo apt-get install -y build-essential libcmocka-dev # Adjust based on your CMocka installation method
+      run: sudo apt-get update && sudo apt-get install -y build-essential pkgconfig libcmocka-dev # Adjust based on your CMocka installation method
 
     - name: Build
       run: make
