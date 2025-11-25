@@ -133,8 +133,7 @@ int parse_sf(isotp_ctx_t ctx,
     }
 
     // verify the length of the CAN frame
-    if ((ctx->can_frame_len < 0) ||
-        (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT))) {
+    if (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT)) {
         return -EBADMSG;
     }
 
