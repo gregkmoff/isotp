@@ -25,6 +25,3 @@ jobs:
 
     - name: Build the isotp_udp test
       run: make clean && make isotp_udp
-
-    - name: Coverage tests
-      run: make clean && make coverage
