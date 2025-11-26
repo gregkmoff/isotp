@@ -22,3 +22,9 @@ jobs:
 
     - name: Run tests
       run: make test
+
+    - name: Build the isotp_udp test
+      run: make isotp_udp
+
+    - name: Coverage tests
+      run: make coverage
