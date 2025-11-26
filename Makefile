@@ -53,7 +53,7 @@ BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
 REV=$(shell git rev-parse --short HEAD)
-CMOCKA_FLAGS=$(shell pkg-config --cflags --libs cmocka)
+CMOCKA_FLAGS=$(shell pkg-config --cflags --libs cmocka) -lcmocka
 LIB = ${BUILD_DIR}/libisotp.so
 
 default: all
