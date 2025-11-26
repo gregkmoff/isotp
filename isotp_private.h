@@ -369,17 +369,6 @@ static inline uint64_t timeout_elapsed(isotp_ctx_t ctx) {
 }
 
 /**
- * @brief return a pointer to the start of the ISOTP frame data, excluding the address extension
- *
- * @param ctx - the ISOTP context containing the CAN frame
- *
- * @returns
- * on success, non-NULL pointer to the start of the ISOTP frame data within the CAN frame
- * otherwise, NULL.  The ctx parameter or ISOTP addressing mode is invalid
- */
-uint8_t* frame_data_ptr(isotp_ctx_t ctx);
-
-/**
  * @brief return the maximum CAN frame data length
  *
  * Based on the ISOTP addressing mode and the CAN format
@@ -418,6 +407,16 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode);
  */
 int max_sf_datalen(const isotp_ctx_t ctx);
 
+/**
+ * @brief print buffer contents for debugging
+ *
+ * When DEBUG is defined, this function prints a formatted hex dump of the buffer.
+ * When DEBUG is not defined, this function does nothing (optimized out by compiler).
+ *
+ * @param header - header string to print before the buffer
+ * @param buf - pointer to the buffer to print
+ * @param buf_len - length of the buffer in bytes
+ */
 void printbuf(const char* header, const uint8_t* buf, const int buf_len);
 
 #endif  /* ISOTP_PRIVATE_H */

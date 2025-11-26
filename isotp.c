@@ -141,17 +141,23 @@ size_t isotp_ctx_t_size(void) {
     return sizeof(struct isotp_ctx_s);
 }
 
-void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
 #ifdef DEBUG
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
     printf("%s [ ", header);
     for (int i=0; i < buf_len; i++) {
         printf("%02x ", buf[i]);
     }
     printf(" ]\n");
     fflush(stdout);
+}
 #else
+/* MISRA C:2012 Rule 2.2 - Dead code elimination
+ * When DEBUG is not defined, provide empty implementation that will be optimized out.
+ * This ensures all calls to printbuf() compile without warnings, while producing no code.
+ */
+void printbuf(const char* header, const uint8_t* buf, const int buf_len) {
     (void)header;
     (void)buf;
     (void)buf_len;
-#endif  // DEBUG
 }
+#endif  /* DEBUG */
