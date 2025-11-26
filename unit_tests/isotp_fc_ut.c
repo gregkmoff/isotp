@@ -162,6 +162,196 @@ static void fc_stmin_usec_to_parameter_reserved(void** state) {
     assert_true(fc_stmin_usec_to_parameter(MAX_STMIN_USEC + 1) == MAX_STMIN);
 }
 
+/**
+ * MISRA compliance test: Boundary value testing for uint8_t overflow prevention
+ * Tests the specific case mentioned in MISRA analysis:
+ * Line 186: stmin_param = 0xf0 + (stmin_usec / 100)
+ */
+static void fc_stmin_usec_to_parameter_boundary_100_to_999(void** state) {
+    (void)state;
+
+    /* Test exact boundaries for 100-999 microsecond range */
+    /* Lower boundary: 100us -> 0xf0 + 1 = 0xf1 */
+    assert_int_equal(fc_stmin_usec_to_parameter(100), 0xf1);
+    assert_int_equal(fc_stmin_usec_to_parameter(101), 0xf1);
+    assert_int_equal(fc_stmin_usec_to_parameter(199), 0xf1);
+
+    /* Middle values */
+    assert_int_equal(fc_stmin_usec_to_parameter(200), 0xf2);
+    assert_int_equal(fc_stmin_usec_to_parameter(500), 0xf5);
+    assert_int_equal(fc_stmin_usec_to_parameter(555), 0xf5);
+
+    /* Upper boundary: 900us -> 0xf0 + 9 = 0xf9 */
+    assert_int_equal(fc_stmin_usec_to_parameter(900), 0xf9);
+    assert_int_equal(fc_stmin_usec_to_parameter(999), 0xf9);
+
+    /* Just outside range - should map to next category */
+    assert_int_equal(fc_stmin_usec_to_parameter(1000), 0x01);  /* 1ms */
+}
+
+/**
+ * MISRA compliance test: Verify no overflow for maximum values
+ * Tests the specific case mentioned in MISRA analysis:
+ * Line 188: stmin_param = stmin_usec / USEC_PER_MSEC
+ */
+static void fc_stmin_usec_to_parameter_boundary_1ms_to_127ms(void** state) {
+    (void)state;
+
+    /* Test millisecond range boundaries */
+    /* Lower boundary: 1000us = 1ms -> 0x01 */
+    assert_int_equal(fc_stmin_usec_to_parameter(1000), 0x01);
+    assert_int_equal(fc_stmin_usec_to_parameter(1001), 0x01);
+    assert_int_equal(fc_stmin_usec_to_parameter(1999), 0x01);
+
+    /* Middle values */
+    assert_int_equal(fc_stmin_usec_to_parameter(10000), 0x0a);   /* 10ms */
+    assert_int_equal(fc_stmin_usec_to_parameter(50000), 0x32);   /* 50ms */
+
+    /* Upper boundary: 126ms = 126000us -> 0x7e (MAX_STMIN-1) */
+    assert_int_equal(fc_stmin_usec_to_parameter(126000), 0x7e);
+    assert_int_equal(fc_stmin_usec_to_parameter(126999), 0x7e);
+
+    /* Just at the edge: 127ms -> would be 0x7f but should clamp */
+    /* Note: MAX_STMIN_USEC = 127000, so this is at boundary */
+    assert_int_equal(fc_stmin_usec_to_parameter(126999), 0x7e);
+
+    /* Outside valid range - should default to MAX_STMIN */
+    assert_int_equal(fc_stmin_usec_to_parameter(127000), MAX_STMIN);
+    assert_int_equal(fc_stmin_usec_to_parameter(128000), MAX_STMIN);
+}
+
+/**
+ * MISRA compliance test: Validate arithmetic doesn't produce negative values
+ * Tests the specific case mentioned in MISRA analysis:
+ * Line 204: stmin_usec = ((stmin_param - 0xf0) * 100)
+ */
+static void fc_stmin_parameter_to_usec_boundary_0xf1_to_0xf9(void** state) {
+    (void)state;
+
+    /* Test exact boundaries for microsecond encoding range */
+    /* Lower boundary: 0xf1 -> (0xf1 - 0xf0) * 100 = 1 * 100 = 100 */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf1), 100);
+
+    /* Middle values */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf2), 200);
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf5), 500);
+
+    /* Upper boundary: 0xf9 -> (0xf9 - 0xf0) * 100 = 9 * 100 = 900 */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf9), 900);
+
+    /* Boundary exclusions */
+    /* 0xf0 is in reserved range, should return MAX_STMIN_USEC */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf0), MAX_STMIN_USEC);
+
+    /* 0xfa is in reserved range, should return MAX_STMIN_USEC */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xfa), MAX_STMIN_USEC);
+}
+
+/**
+ * MISRA compliance test: Verify type conversion safety for all valid inputs
+ * Ensures no integer overflow or underflow in conversion functions
+ */
+static void fc_stmin_roundtrip_conversion_test(void** state) {
+    (void)state;
+
+    /* Test round-trip conversion for all valid microsecond values */
+
+    /* Zero special case */
+    assert_int_equal(fc_stmin_parameter_to_usec(
+        fc_stmin_usec_to_parameter(0)), 0);
+
+    /* 100-900us range (should round to nearest 100us) */
+    for (int usec = 100; usec < 1000; usec += 100) {
+        uint8_t param = fc_stmin_usec_to_parameter(usec);
+        int usec_back = fc_stmin_parameter_to_usec(param);
+        assert_int_equal(usec_back, usec);
+    }
+
+    /* 1ms-126ms range */
+    for (int msec = 1; msec <= 126; msec++) {
+        int usec = msec * 1000;
+        uint8_t param = fc_stmin_usec_to_parameter(usec);
+        int usec_back = fc_stmin_parameter_to_usec(param);
+        assert_int_equal(usec_back, usec);
+    }
+}
+
+/**
+ * MISRA compliance test: Explicit testing of type safety
+ * Validates that narrowing conversions are safe
+ */
+static void fc_stmin_type_safety_test(void** state) {
+    (void)state;
+
+    /* Verify that maximum valid parameter values fit in uint8_t */
+    uint8_t max_usec_param = fc_stmin_usec_to_parameter(900);
+    assert_true(max_usec_param == 0xf9);
+    assert_true(max_usec_param <= UINT8_MAX);
+
+    uint8_t max_msec_param = fc_stmin_usec_to_parameter(126000);
+    assert_true(max_msec_param == 0x7e);
+    assert_true(max_msec_param <= UINT8_MAX);
+
+    /* Verify that maximum usec values fit in int */
+    int max_usec = fc_stmin_parameter_to_usec(0xf9);
+    assert_int_equal(max_usec, 900);
+
+    int max_msec_as_usec = fc_stmin_parameter_to_usec(MAX_STMIN);
+    assert_int_equal(max_msec_as_usec, MAX_STMIN_USEC);
+}
+
+/**
+ * MISRA compliance test: Edge case for potential overflow in addition
+ * Specifically tests: 0xf0 + (stmin_usec / 100) doesn't exceed uint8_t
+ */
+static void fc_stmin_usec_to_parameter_no_overflow(void** state) {
+    (void)state;
+
+    /* Maximum value in 100-999 range should produce 0xf9 */
+    /* 999 / 100 = 9, so 0xf0 + 9 = 0xf9 = 249 (well within uint8_t max of 255) */
+    uint8_t result_max = fc_stmin_usec_to_parameter(999);
+    assert_int_equal(result_max, 0xf9);
+    assert_true(result_max <= UINT8_MAX);
+
+    /* Verify intermediate calculation would fit */
+    /* Even if we had (stmin_usec / 100) = 15 (which we don't), */
+    /* 0xf0 + 15 = 0xff = 255, still within uint8_t */
+    /* Our actual max is 9, so 0xf0 + 9 = 0xf9 = 249 */
+    int division_result = 999 / 100;  /* = 9 */
+    assert_int_equal(division_result, 9);
+    int sum = 0xf0 + division_result;  /* = 249 */
+    assert_int_equal(sum, 0xf9);
+    assert_true(sum <= UINT8_MAX);
+}
+
+/**
+ * MISRA compliance test: Edge case for subtraction producing negative
+ * Specifically tests: (stmin_param - 0xf0) is always positive
+ */
+static void fc_stmin_parameter_to_usec_no_underflow(void** state) {
+    (void)state;
+
+    /* All valid inputs 0xf1-0xf9 should produce positive differences */
+    for (uint8_t param = 0xf1; param <= 0xf9; param++) {
+        int usec = fc_stmin_parameter_to_usec(param);
+
+        /* Verify result is positive */
+        assert_true(usec >= 100);
+        assert_true(usec <= 900);
+
+        /* Verify the calculation: (param - 0xf0) * 100 */
+        int diff = param - 0xf0;
+        assert_true(diff >= 1);
+        assert_true(diff <= 9);
+        assert_int_equal(usec, diff * 100);
+    }
+
+    /* Values below 0xf1 should not execute this code path */
+    /* They should return MAX_STMIN_USEC (reserved) or specific values */
+    assert_int_equal(fc_stmin_parameter_to_usec(0xf0), MAX_STMIN_USEC);
+    assert_int_equal(fc_stmin_parameter_to_usec(0x80), MAX_STMIN_USEC);
+}
+
 static void parse_fc_invalid_parameters(void** state) {
     (void)state;
 
@@ -398,6 +588,14 @@ int main(void) {
         cmocka_unit_test(fc_stmin_usec_to_parameter_usec),
         cmocka_unit_test(fc_stmin_usec_to_parameter_msec),
         cmocka_unit_test(fc_stmin_usec_to_parameter_reserved),
+        /* MISRA compliance tests for overflow/underflow prevention */
+        cmocka_unit_test(fc_stmin_usec_to_parameter_boundary_100_to_999),
+        cmocka_unit_test(fc_stmin_usec_to_parameter_boundary_1ms_to_127ms),
+        cmocka_unit_test(fc_stmin_parameter_to_usec_boundary_0xf1_to_0xf9),
+        cmocka_unit_test(fc_stmin_roundtrip_conversion_test),
+        cmocka_unit_test(fc_stmin_type_safety_test),
+        cmocka_unit_test(fc_stmin_usec_to_parameter_no_overflow),
+        cmocka_unit_test(fc_stmin_parameter_to_usec_no_underflow),
         cmocka_unit_test(parse_fc_invalid_parameters),
         cmocka_unit_test(parse_fc_invalid_ael),
         cmocka_unit_test(parse_fc_invalid_frame_len),
