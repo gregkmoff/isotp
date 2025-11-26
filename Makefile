@@ -53,7 +53,8 @@ BUILD_DIR = ./build
 OBJ_DIR = ${BUILD_DIR}/obj
 LINT_DIR = ${BUILD_DIR}/lint
 REV=$(shell git rev-parse --short HEAD)
-CMOCKA_FLAGS=$(shell pkg-config --cflags --libs cmocka) -lcmocka
+CMOCKA_CFLAGS=$(shell pkg-config --cflags cmocka)
+CMOCKA_LIBS=$(shell pkg-config --libs cmocka)
 LIB = ${BUILD_DIR}/libisotp.so
 
 default: all
@@ -100,14 +101,14 @@ coverage: setup $(OBJS)
 	$(CC) -shared --coverage -o ${BUILD_DIR}/libisotp.$(GIT_TAG).so ${OBJ_DIR}/can/*.o ${OBJ_DIR}/*.o
 	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
 	@echo "Building unit tests with coverage..."
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_fc_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_ff_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o unit_tests/isotp_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/isotp_timeout_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c
-	@$(CC) -I. -g -O0 --coverage -o ${BUILD_DIR}/platform_time_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/platform_time.o unit_tests/platform_time_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/can_ut ${OBJ_DIR}/can/can.o can/can_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_cf_ut ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_fc_ut ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_ff_ut ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_sf_ut ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_ut ${OBJ_DIR}/isotp.o unit_tests/isotp_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_timeout_ut ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/platform_time_ut ${OBJ_DIR}/platform_time.o unit_tests/platform_time_ut.c $(CMOCKA_LIBS)
 	@echo ""
 	@echo "Running tests to generate coverage data..."
 	@${BUILD_DIR}/can_ut
@@ -127,21 +128,21 @@ coverage: setup $(OBJS)
 	@echo "  genhtml ${BUILD_DIR}/coverage.info --output-directory ${BUILD_DIR}/coverage_html"
 
 test: setup $(OBJS)
-	@$(CC) -I. -o ${BUILD_DIR}/can_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/can/can.o can/can_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/can_ut ${OBJ_DIR}/can/can.o can/can_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/can_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_cf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_cf_ut ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_cf_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_fc_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_fc_ut ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_fc_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_ff_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_ff_ut ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_ff_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_sf_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_sf_ut ${OBJ_DIR}/isotp_sf.o unit_tests/isotp_sf_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_sf_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o unit_tests/isotp_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_ut ${OBJ_DIR}/isotp.o unit_tests/isotp_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_ut
-	@$(CC) -I. -o ${BUILD_DIR}/isotp_timeout_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_timeout_ut ${OBJ_DIR}/isotp.o ${OBJ_DIR}/isotp_send.o ${OBJ_DIR}/isotp_recv.o ${OBJ_DIR}/isotp_cf.o ${OBJ_DIR}/isotp_fc.o ${OBJ_DIR}/isotp_ff.o ${OBJ_DIR}/isotp_sf.o ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/isotp_common.o ${OBJ_DIR}/platform_time.o ${OBJ_DIR}/can/can.o unit_tests/isotp_timeout_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_timeout_ut
-	@$(CC) -I. -o ${BUILD_DIR}/platform_time_ut $(CMOCKA_FLAGS) ${OBJ_DIR}/platform_time.o unit_tests/platform_time_ut.c
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/platform_time_ut ${OBJ_DIR}/platform_time.o unit_tests/platform_time_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/platform_time_ut
 
 main_test: $(LIB)
