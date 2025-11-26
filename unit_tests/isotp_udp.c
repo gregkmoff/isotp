@@ -214,8 +214,12 @@ int main(int argc, char** argv) {
     freeaddrinfo(results);  // no longer needed
 
     printf("Creating ISOTP context...");
-    isotp_ctx_t ctx = NULL;
-    rc = isotp_ctx_init(&ctx, CANFD_FORMAT, ISOTP_NORMAL_ADDRESSING_MODE, 0,
+    isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
+    if (ctx == NULL) {
+        printf("FAILED to allocate\n");
+        return (-1) * ENOMEM;
+    }
+    rc = isotp_ctx_init(ctx, CANFD_FORMAT, ISOTP_NORMAL_ADDRESSING_MODE, 0,
                             NULL, &cc, &canudp_rx_f, &canudp_tx_f);
     if (rc < 0) {
         char b[256];

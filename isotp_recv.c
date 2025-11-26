@@ -51,10 +51,10 @@ static int recv_cfs(isotp_ctx_t ctx,
             return rc;
         }
 
-        rc = (*(ctx->can_tx_f))(ctx->can_ctx,
-                                ctx->can_frame,
-                                ctx->can_frame_len,
-                                timeout);
+        rc = ctx->can_tx_f(ctx->can_ctx,
+                           ctx->can_frame,
+                           ctx->can_frame_len,
+                           timeout);
         if (rc < 0) {
             return rc;
         }
@@ -71,10 +71,10 @@ static int recv_cfs(isotp_ctx_t ctx,
                 return -ETIMEDOUT;
             }
 
-            rc = (*(ctx->can_rx_f))(ctx->can_ctx,
-                                    ctx->can_frame,
-                                    sizeof(ctx->can_frame),
-                                    timeout);
+            rc = ctx->can_rx_f(ctx->can_ctx,
+                               ctx->can_frame,
+                               sizeof(ctx->can_frame),
+                               timeout);
             if (rc < 0) {
                 return rc;
             }
@@ -119,10 +119,10 @@ int isotp_recv(isotp_ctx_t ctx,
     ctx->total_datalen = 0;
     ctx->remaining_datalen = 0;
 
-    rc = (*(ctx->can_rx_f))(ctx->can_ctx,
-                            ctx->can_frame,
-                            sizeof(ctx->can_frame),
-                            timeout);
+    rc = ctx->can_rx_f(ctx->can_ctx,
+                       ctx->can_frame,
+                       sizeof(ctx->can_frame),
+                       timeout);
     if (rc < 0) {
         return rc;
     }

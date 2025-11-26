@@ -44,10 +44,10 @@ static int send_sf(isotp_ctx_t ctx,
         return rc;
     }
 
-    rc = (*(ctx->can_tx_f))(ctx->can_ctx,
-                            ctx->can_frame,
-                            ctx->can_frame_len,
-                            timeout);
+    rc = ctx->can_tx_f(ctx->can_ctx,
+                       ctx->can_frame,
+                       ctx->can_frame_len,
+                       timeout);
 
     return rc;
 }
@@ -70,10 +70,10 @@ static int send_cfs(isotp_ctx_t ctx,
         if (rc < 0) {
             return rc;
         }
-        rc = (*(ctx->can_tx_f))(ctx->can_ctx,
-                                ctx->can_frame,
-                                ctx->can_frame_len,
-                                timeout);
+        rc = ctx->can_tx_f(ctx->can_ctx,
+                           ctx->can_frame,
+                           ctx->can_frame_len,
+                           timeout);
         if (rc < 0) {
             return rc;
         }
@@ -107,10 +107,10 @@ static int send_ff(isotp_ctx_t ctx,
         return rc;
     }
 
-    rc = (*(ctx->can_tx_f))(ctx->can_ctx,
-                            ctx->can_frame,
-                            ctx->can_frame_len,
-                            timeout);
+    rc = ctx->can_tx_f(ctx->can_ctx,
+                       ctx->can_frame,
+                       ctx->can_frame_len,
+                       timeout);
     if (rc < 0) {
         return rc;
     }
@@ -133,10 +133,10 @@ static int send_ff(isotp_ctx_t ctx,
         }
 
         // wait for FC
-        rc = (*(ctx->can_rx_f))(ctx->can_ctx,
-                                ctx->can_frame,
-                                sizeof(ctx->can_frame),
-                                timeout);
+        rc = ctx->can_rx_f(ctx->can_ctx,
+                           ctx->can_frame,
+                           sizeof(ctx->can_frame),
+                           timeout);
         if (rc < 0) {
             return rc;
         }
