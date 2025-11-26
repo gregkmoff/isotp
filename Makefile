@@ -121,7 +121,8 @@ coverage: setup $(OBJS)
 	@${BUILD_DIR}/platform_time_ut
 	@echo ""
 	@echo "Generating coverage report..."
-	@cd ${BUILD_DIR} && gcov -o ${OBJ_DIR} $(addprefix ../,$(SRCS))
+	@cd ${BUILD_DIR} && gcov -o obj $(addprefix ../,$(SRCS)) 2>/dev/null
+	@cd ${BUILD_DIR} && gcov -o obj/can ../can/can.c 2>/dev/null
 	@echo ""
 	@echo "Coverage files generated. Use 'lcov' for HTML reports:"
 	@echo "  lcov --capture --directory ${OBJ_DIR} --output-file ${BUILD_DIR}/coverage.info"
