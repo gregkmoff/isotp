@@ -149,5 +149,6 @@ main_test: $(LIB)
 	$(CC) -I. -L${BUILD_DIR} -lc -lisotp unit_tests/main_test.c -o ${BUILD_DIR}/main_test
 	${BUILD_DIR}/main_test
 
-isotp_udp: debug
-	$(CC) -g -DDEBUG -I. -L${BUILD_DIR} -lc -lisotp unit_tests/isotp_udp.c -o ${BUILD_DIR}/isotp_udp
+isotp_udp: CFLAGS += -g -DDEBUG
+isotp_udp: lib
+	$(CC) -g -DDEBUG -I. -L${BUILD_DIR} -Wl,-rpath,${BUILD_DIR} -o ${BUILD_DIR}/isotp_udp unit_tests/isotp_udp.c -lisotp
