@@ -92,8 +92,9 @@ static int canudp_rx_f(void* rxfn_ctx,
         rc = recvfrom(cc->sockfd, rx_buf_p, rx_buf_sz, 0,
                         (struct sockaddr*)&(cc->peer_addr),
                         &(cc->peer_addr_len));
-        (void)inet_ntop(AF_INET, &(cc->peer_addr), a, sizeof(a));
-        printf("RECVFROM %d %s: ", rc, a);
+        struct sockaddr_in* sin = (struct sockaddr_in*)&(cc->peer_addr);
+        (void)inet_ntop(AF_INET, &(sin->sin_addr), a, sizeof(a));
+        printf("RECVFROM (%d) %s:%u\n", rc, a, ntohs(sin->sin_port));
         break;
     }
 
@@ -109,11 +110,12 @@ static int canudp_tx_f(void* txfn_ctx,
     (void)timeout_usec;
 
     char a[128];
-    (void)inet_ntop(AF_INET, &(cc->peer_addr), a, sizeof(a));
-    printf("SENDTO %s : ", a);
+    struct sockaddr_in* sin = (struct sockaddr_in*)&(cc->peer_addr);
+    (void)inet_ntop(AF_INET, &(sin->sin_addr), a, sizeof(a));
     rc = sendto(cc->sockfd, tx_buf_p, tx_len, 0,
                 (struct sockaddr*)&(cc->peer_addr),
                 cc->peer_addr_len);
+    printf("SENDTO (%zd) %s:%u\n", rc, a, ntohs(sin->sin_port));
     if (rc < 0) {
         char b[255];
         (void)strerror_r(errno, b, sizeof(b));
@@ -156,7 +158,7 @@ int main(int argc, char** argv) {
         break;
     }
 
-    printf("Opening socket...");
+    printf("*** Opening socket...");
 
     struct addrinfo hints;
     struct addrinfo *results;
@@ -213,7 +215,7 @@ int main(int argc, char** argv) {
     }
     freeaddrinfo(results);  // no longer needed
 
-    printf("Creating ISOTP context...");
+    printf("*** Creating ISOTP context...");
     isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
     if (ctx == NULL) {
         printf("FAILED to allocate\n");
@@ -235,37 +237,37 @@ int main(int argc, char** argv) {
     memset(buf, 0xad, sizeof(buf));
 
     if (mode == CLIENT) {
-        printf("Sending %lu bytes...", sizeof(buf));
+        printf("---> Sending %lu bytes of data...\n", sizeof(buf));
         rc = isotp_send(ctx, buf, sizeof(buf), 1000);
         if (rc < 0) {
             char b[256];
             (void)strerror_r((-1) * rc, b, sizeof(b));
 
-            printf("FAILED\n%s\n", b);
+            printf("---> FAILED\n%s\n", b);
             goto out;
         } else {
-            printf("PASSED\n");
+            printf("---> PASSED\n");
         }
-        printf("Receiving reply...");
+        printf("<--- Receiving reply...\n");
         rc = isotp_recv(ctx, buf, sizeof(buf), 0, 1000, 1000000);
         if (rc < 0) {
             char b[256];
             (void)strerror_r((-1) * rc, b, sizeof(b));
 
-            printf("FAILED\n%s\n", b);
+            printf("<--- FAILED\n%s\n", b);
             goto out;
         } else {
-            printf("PASSED\n");
+            printf("<--- PASSED\n");
         }
     } else if (mode == SERVER) {
         for (;;) {
             (void)isotp_ctx_reset(ctx);
             rc = isotp_recv(ctx, buf, sizeof(buf), 0, 1000, 1000000);
-            printf("Received %d bytes\n", rc);
+            printf("<--- Received %d bytes\n", rc);
             if (rc < 0) {
                 continue;
             }
-            printf("Sending Reply...\n");
+            printf("---> Sending Reply...\n");
             do {
             rc = isotp_send(ctx, buf, sizeof(buf), 1000);
             printf("isotp_send() %d\n", rc);
@@ -279,7 +281,7 @@ int main(int argc, char** argv) {
     }
 
 out:
-    printf("Exitting...\n");
+    printf("*** Exitting...\n");
     close(cc.sockfd);
     free(ctx);
     return rc;
