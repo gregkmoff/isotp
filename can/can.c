@@ -62,72 +62,36 @@ static inline int max_int(int x, int y) {
     return result;
 }
 
-#ifndef NUM_ENTRIES
-#define NUM_ENTRIES(x) (sizeof(x) / sizeof((x)[0]))
-#endif  // NUM_ENTRIES
-
-static const int CAN_dlc_to_datalen[CAN_MAX_DLC + 1] =
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-_Static_assert(NUM_ENTRIES(CAN_dlc_to_datalen) == (CAN_MAX_DLC + 1),
-               "CAN DLC to DATALEN size mismatch");
-
-static const int CANFD_dlc_to_datalen[CANFD_MAX_DLC + 1] =
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64 };
-_Static_assert(NUM_ENTRIES(CANFD_dlc_to_datalen) == (CANFD_MAX_DLC + 1),
-               "CANFD DLC to DATALEN size mismatch");
-
-static const bool _can_format_to_valid[NUM_CAN_FORMATS] =
-    { false, true, true, false };
-_Static_assert(NUM_ENTRIES(_can_format_to_valid) == (NUM_CAN_FORMATS),
-               "VALID CAN FORMATS size mismatch");
-
-static const int CAN_datalen_to_dlc[CAN_MAX_DATALEN + 1] =
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-_Static_assert(NUM_ENTRIES(CAN_datalen_to_dlc) == (CAN_MAX_DATALEN + 1),
-               "CAN DATALEN to DLC size mismatch");
-
-static const int CANFD_datalen_to_dlc[CANFD_MAX_DATALEN + 1] = {
-        // 0-8
-        0, 1, 2, 3, 4, 5, 6, 7, 8,
-        // 9-12
-        9, 9, 9, 9,
-        // 13-16
-        10, 10, 10, 10,
-        // 17-20
-        11, 11, 11, 11,
-        // 21-24
-        12, 12, 12, 12,
-        // 25-32
-        13, 13, 13, 13, 13, 13, 13, 13,
-        // 33-48
-        14, 14, 14, 14, 14, 14, 14, 14,
-        14, 14, 14, 14, 14, 14, 14, 14,
-        // 49-64
-        15, 15, 15, 15, 15, 15, 15, 15,
-        15, 15, 15, 15, 15, 15, 15, 15
-    };
-_Static_assert(NUM_ENTRIES(CANFD_datalen_to_dlc) == (CANFD_MAX_DATALEN + 1),
-               "CANFD DATALEN to DLC size mismatch");
+/* MISRA C:2012 Rule 8.9 - Objects defined at block scope
+ * Lookup tables are defined within their respective functions to comply with
+ * MISRA C:2012 Rule 8.9, which requires objects to be defined at the most
+ * restrictive scope possible.
+ */
 
 static inline bool valid_can_format(const can_format_t f) {
+    /* MISRA C:2012 Rule 8.9 - Lookup table at block scope */
+    static const bool _can_format_to_valid[NUM_CAN_FORMATS] =
+        { false, true, true, false };
+    _Static_assert((sizeof(_can_format_to_valid) / sizeof(_can_format_to_valid[0])) == (NUM_CAN_FORMATS),
+                   "VALID CAN FORMATS size mismatch");
     return _can_format_to_valid[f];
 }
 
-static const int _format_to_max_datalen[NUM_CAN_FORMATS] =
-    { -EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ERANGE };
-_Static_assert(NUM_ENTRIES(_format_to_max_datalen) == (NUM_CAN_FORMATS),
-               "MAX DATALEN FORMATS size mismatch");
-
 int can_max_datalen(const can_format_t format) {
+    /* MISRA C:2012 Rule 8.9 - Lookup table at block scope */
+    static const int _format_to_max_datalen[NUM_CAN_FORMATS] =
+        { -EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ERANGE };
+    _Static_assert((sizeof(_format_to_max_datalen) / sizeof(_format_to_max_datalen[0])) == (NUM_CAN_FORMATS),
+                   "MAX DATALEN FORMATS size mismatch");
     return _format_to_max_datalen[format];
 }
 
-static const int _format_to_max_dlc[NUM_CAN_FORMATS] =
-    { -EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ERANGE };
-_Static_assert(NUM_ENTRIES(_format_to_max_dlc) == (NUM_CAN_FORMATS),
-               "MAX DLC FORMATS size mismatch");
-
 int can_max_dlc(const can_format_t format) {
+    /* MISRA C:2012 Rule 8.9 - Lookup table at block scope */
+    static const int _format_to_max_dlc[NUM_CAN_FORMATS] =
+        { -EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ERANGE };
+    _Static_assert((sizeof(_format_to_max_dlc) / sizeof(_format_to_max_dlc[0])) == (NUM_CAN_FORMATS),
+                   "MAX DLC FORMATS size mismatch");
     return _format_to_max_dlc[format];
 }
 
@@ -201,6 +165,17 @@ int pad_can_frame_len(uint8_t* buf,
 }
 
 int can_dlc_to_datalen(const int dlc, const can_format_t format) {
+    /* MISRA C:2012 Rule 8.9 - Lookup tables at block scope */
+    static const int CAN_dlc_to_datalen[CAN_MAX_DLC + 1] =
+        { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    _Static_assert((sizeof(CAN_dlc_to_datalen) / sizeof(CAN_dlc_to_datalen[0])) == (CAN_MAX_DLC + 1),
+                   "CAN DLC to DATALEN size mismatch");
+
+    static const int CANFD_dlc_to_datalen[CANFD_MAX_DLC + 1] =
+        { 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64 };
+    _Static_assert((sizeof(CANFD_dlc_to_datalen) / sizeof(CANFD_dlc_to_datalen[0])) == (CANFD_MAX_DLC + 1),
+                   "CANFD DLC to DATALEN size mismatch");
+
     if (dlc < 0) {
         return -EINVAL;
     }
@@ -228,6 +203,35 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format) {
 }
 
 int can_datalen_to_dlc(const int datalen, const can_format_t format) {
+    /* MISRA C:2012 Rule 8.9 - Lookup tables at block scope */
+    static const int CAN_datalen_to_dlc[CAN_MAX_DATALEN + 1] =
+        { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    _Static_assert((sizeof(CAN_datalen_to_dlc) / sizeof(CAN_datalen_to_dlc[0])) == (CAN_MAX_DATALEN + 1),
+                   "CAN DATALEN to DLC size mismatch");
+
+    static const int CANFD_datalen_to_dlc[CANFD_MAX_DATALEN + 1] = {
+            // 0-8
+            0, 1, 2, 3, 4, 5, 6, 7, 8,
+            // 9-12
+            9, 9, 9, 9,
+            // 13-16
+            10, 10, 10, 10,
+            // 17-20
+            11, 11, 11, 11,
+            // 21-24
+            12, 12, 12, 12,
+            // 25-32
+            13, 13, 13, 13, 13, 13, 13, 13,
+            // 33-48
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            // 49-64
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15
+        };
+    _Static_assert((sizeof(CANFD_datalen_to_dlc) / sizeof(CANFD_datalen_to_dlc[0])) == (CANFD_MAX_DATALEN + 1),
+                   "CANFD DATALEN to DLC size mismatch");
+
     if (datalen < 0) {
         return -EINVAL;
     }
