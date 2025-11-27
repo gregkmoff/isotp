@@ -346,7 +346,7 @@ static inline void timeout_start(isotp_ctx_t ctx) {
  * true if timeout has occurred
  * false if timeout has not occurred
  */
-static inline bool timeout_expired(isotp_ctx_t ctx, uint64_t timeout_us) {
+static inline bool timeout_expired(const isotp_ctx_t ctx, uint64_t timeout_us) {
     if ((ctx == NULL) || (timeout_us == 0)) {
         return false;
     }
@@ -361,7 +361,7 @@ static inline bool timeout_expired(isotp_ctx_t ctx, uint64_t timeout_us) {
  *
  * @returns elapsed time in microseconds
  */
-static inline uint64_t timeout_elapsed(isotp_ctx_t ctx) {
+static inline uint64_t timeout_elapsed(const isotp_ctx_t ctx) {
     if (ctx == NULL) {
         return 0;
     }
