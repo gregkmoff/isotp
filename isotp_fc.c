@@ -45,6 +45,10 @@
 #define MAX_STMIN (0x7f)
 #define MAX_STMIN_USEC (MAX_STMIN * USEC_PER_MSEC)
 
+/* MISRA C:2012 Rule 10.4 - Explicitly typed constants to avoid mixed signedness */
+static const int USEC_PER_MSEC_INT = USEC_PER_MSEC;
+static const int MAX_STMIN_USEC_INT = MAX_STMIN_USEC;
+
 int parse_fc(isotp_ctx_t ctx,
              isotp_fc_flowstatus_t* flowstatus,
              uint8_t* blocksize,
@@ -181,11 +185,13 @@ uint8_t fc_stmin_usec_to_parameter(const int stmin_usec) {
                                       // default to 0x7f (127ms)
 
     if ((stmin_usec >= 0) && (stmin_usec < 100)) {
-        stmin_param = 0x00;
-    } else if ((stmin_usec >= 100) && (stmin_usec < USEC_PER_MSEC)) {
-        stmin_param = 0xf0 + (stmin_usec / 100);
-    } else if ((stmin_usec >= USEC_PER_MSEC) && (stmin_usec < MAX_STMIN_USEC)) {
-        stmin_param = stmin_usec / USEC_PER_MSEC;
+        stmin_param = 0x00U;
+    } else if ((stmin_usec >= 100) && (stmin_usec < USEC_PER_MSEC_INT)) {
+        /* MISRA C:2012 Rule 10.4 - Use int constant to avoid mixed signedness */
+        stmin_param = 0xf0U + (uint8_t)(stmin_usec / 100);
+    } else if ((stmin_usec >= USEC_PER_MSEC_INT) && (stmin_usec < MAX_STMIN_USEC_INT)) {
+        /* MISRA C:2012 Rule 10.4 - Use int constant to avoid mixed signedness */
+        stmin_param = (uint8_t)(stmin_usec / USEC_PER_MSEC_INT);
     } else {
         // default to 0x7f (127ms)
         // ref ISO-15765-2:2016, section 9.6.5.5
@@ -196,18 +202,21 @@ uint8_t fc_stmin_usec_to_parameter(const int stmin_usec) {
 }
 
 int fc_stmin_parameter_to_usec(const uint8_t stmin_param) {
-    int stmin_usec = MAX_STMIN_USEC;
+    int stmin_usec = MAX_STMIN_USEC_INT;
 
-    if (stmin_param == 0) {
+    if (stmin_param == 0U) {
         stmin_usec = 0;
-    } else if ((stmin_param >= 0xf1) && (stmin_param <= 0xf9)) {
-        stmin_usec = ((stmin_param - 0xf0) * 100);
-    } else if ((stmin_param > 0) && (stmin_param <= MAX_STMIN)) {
-        stmin_usec = stmin_param * USEC_PER_MSEC;
+    } else if ((stmin_param >= 0xf1U) && (stmin_param <= 0xf9U)) {
+        /* MISRA C:2012 Rule 10.4 - Avoid mixed signedness in arithmetic */
+        int param_offset = (int)stmin_param - 0xf0;
+        stmin_usec = param_offset * 100;
+    } else if ((stmin_param > 0U) && (stmin_param <= MAX_STMIN)) {
+        /* MISRA C:2012 Rule 10.4 - Use int constant to avoid mixed signedness */
+        stmin_usec = (int)stmin_param * USEC_PER_MSEC_INT;
     } else {
         // reserved; default to 127ms
         // ref ISO-15765-2:2016, section 9.6.5.5
-        stmin_usec = MAX_STMIN_USEC;
+        stmin_usec = MAX_STMIN_USEC_INT;
     }
 
     return stmin_usec;

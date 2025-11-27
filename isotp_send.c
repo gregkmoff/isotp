@@ -59,13 +59,14 @@ static int send_cfs(isotp_ctx_t ctx,
                     const int stmin_usec,
                     const uint8_t blocksize) {
     bool continuous = false;
-    if (blocksize == 0) {
+    if (blocksize == 0U) {
         // @ref ISO-15765-2:2016, section 9.6.5.3, table 19
         continuous = true;
     }
 
     uint8_t bs = blocksize;
-    while ((ctx->remaining_datalen > 0) && (continuous || (bs > 0))) {
+    /* MISRA C:2012 Rule 10.4 - Avoid mixing bool with integer comparison */
+    while ((ctx->remaining_datalen > 0) && (continuous || (bs > 0U))) {
         int rc = prepare_cf(ctx, send_buf_p, send_buf_len);
         if (rc < 0) {
             return rc;
@@ -79,7 +80,7 @@ static int send_cfs(isotp_ctx_t ctx,
         }
 
         // prevent under-rolling
-        if (bs > 0) {
+        if (bs > 0U) {
             bs--;
         }
 
