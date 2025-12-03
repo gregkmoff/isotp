@@ -102,6 +102,7 @@ coverage: setup $(OBJS)
 	@ln -sf libisotp.$(GIT_TAG).so ${LIB}
 	@echo "Building unit tests with coverage..."
 	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/can_ut ${OBJ_DIR}/can/can.o can/can_ut.c $(CMOCKA_LIBS)
+	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_addressing_ut ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/can/can.o unit_tests/isotp_addressing_ut.c $(CMOCKA_LIBS)
 	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_cf_ut ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c $(CMOCKA_LIBS)
 	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_fc_ut ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c $(CMOCKA_LIBS)
 	@$(CC) -I. $(CMOCKA_CFLAGS) -g -O0 --coverage -o ${BUILD_DIR}/isotp_ff_ut ${OBJ_DIR}/isotp_ff.o unit_tests/isotp_ff_ut.c $(CMOCKA_LIBS)
@@ -112,6 +113,7 @@ coverage: setup $(OBJS)
 	@echo ""
 	@echo "Running tests to generate coverage data..."
 	@${BUILD_DIR}/can_ut
+	@${BUILD_DIR}/isotp_addressing_ut
 	@${BUILD_DIR}/isotp_cf_ut
 	@${BUILD_DIR}/isotp_fc_ut
 	@${BUILD_DIR}/isotp_ff_ut
@@ -131,6 +133,8 @@ coverage: setup $(OBJS)
 test: setup $(OBJS)
 	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/can_ut ${OBJ_DIR}/can/can.o can/can_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/can_ut
+	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_addressing_ut ${OBJ_DIR}/isotp_addressing.o ${OBJ_DIR}/can/can.o unit_tests/isotp_addressing_ut.c $(CMOCKA_LIBS)
+	${BUILD_DIR}/isotp_addressing_ut
 	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_cf_ut ${OBJ_DIR}/isotp_cf.o unit_tests/isotp_cf_ut.c $(CMOCKA_LIBS)
 	${BUILD_DIR}/isotp_cf_ut
 	@$(CC) -I. $(CMOCKA_CFLAGS) -o ${BUILD_DIR}/isotp_fc_ut ${OBJ_DIR}/isotp_fc.o unit_tests/isotp_fc_ut.c $(CMOCKA_LIBS)

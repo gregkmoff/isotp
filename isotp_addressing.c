@@ -31,39 +31,46 @@
 
 int max_datalen(const isotp_addressing_mode_t addr_mode,
                 const can_format_t can_format) {
+    int rc = 0;
     int can_dl = can_max_datalen(can_format);
     if (can_dl < 0) {
-        return can_dl;
+        rc = can_dl;
+    } else {
+        int ae_l = address_extension_len(addr_mode);
+        if (ae_l < 0) {
+          rc = ae_l;
+        } else if (can_dl <= ae_l) {
+          rc = -EFAULT;
+        } else {
+          rc = can_dl - ae_l;
+        }
     }
 
-    int ae_l = address_extension_len(addr_mode);
-    if (ae_l < 0) {
-        return ae_l;
-    }
-
-    if (can_dl <= ae_l) {
-        return -EFAULT;
-    }
-
-    return can_dl - ae_l;
+    return rc;
 }
 
 int address_extension_len(const isotp_addressing_mode_t addr_mode) {
+    int rc = 0;
     switch (addr_mode) {
     case ISOTP_NORMAL_ADDRESSING_MODE:
     case ISOTP_NORMAL_FIXED_ADDRESSING_MODE:
         // no address extension byte
-        return 0;
+        rc = 0;
+        break;
 
     case ISOTP_EXTENDED_ADDRESSING_MODE:
     case ISOTP_MIXED_ADDRESSING_MODE:
         // one leading address extension byte
-        return 1;
+        rc = 1;
+        break;
 
     case NULL_ISOTP_ADDRESSING_MODE:
     case LAST_ISOTP_ADDRESSING_MODE:
     default:
         // invalid addressing mode
-        return -EFAULT;
+        rc = -EFAULT;
+        break;
     }
+
+    return rc;
 }
