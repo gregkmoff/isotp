@@ -23,13 +23,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
 #include <can/can.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 #define CF_PCI (0x20)
@@ -41,16 +41,16 @@ int parse_cf(isotp_ctx_t ctx,
              const int recv_buf_sz) {
     if ((ctx == NULL) ||
         (recv_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     // make sure we won't run off the end of the receive buffer
     if (ctx->total_datalen > recv_buf_sz) {
-        return -ENOBUFS;
+        return -ISOTP_ENOBUFS;
     }
 
     int ae_l = address_extension_len(ctx->addressing_mode);
@@ -74,7 +74,7 @@ int parse_cf(isotp_ctx_t ctx,
         ctx->sequence_num = INT_MAX;
         ctx->remaining_datalen = INT_MAX;
 
-        return -ECONNABORTED;
+        return -ISOTP_ECONNABORTED;
     } else {
         // advance the expected sequence number
         ctx->sequence_num++;
@@ -92,7 +92,7 @@ int parse_cf(isotp_ctx_t ctx,
     int copy_len = min_int(ctx->can_frame_len - (ae_l + 1),
                            ctx->remaining_datalen);
     if (copy_len < 0) {
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
     memcpy(dp, sp, copy_len);
 
@@ -107,15 +107,15 @@ int prepare_cf(isotp_ctx_t ctx,
                const int send_buf_len) {
     if ((ctx == NULL) ||
         (send_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     if (ctx->total_datalen > send_buf_len) {
-        return -EMSGSIZE;
+        return -ISOTP_EMSGSIZE;
     }
 
     int ae_l = address_extension_len(ctx->addressing_mode);

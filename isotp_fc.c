@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -31,6 +30,7 @@
 
 #include <can/can.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 #define FC_PCI (0x30)
@@ -57,7 +57,7 @@ int parse_fc(isotp_ctx_t ctx,
         (flowstatus == NULL) ||
         (blocksize == NULL) ||
         (stmin_usec == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     int ae_l = address_extension_len(ctx->addressing_mode);
@@ -67,13 +67,13 @@ int parse_fc(isotp_ctx_t ctx,
 
     if (ctx->can_frame_len < (3 + ae_l)) {
         // CAN frame is shorter than
-        return -EMSGSIZE;
+        return -ISOTP_EMSGSIZE;
     }
 
     // check the PCI
     if ((ctx->can_frame[ae_l] & PCI_MASK) != FC_PCI) {
         // not an FC
-        return -ENOMSG;
+        return -ISOTP_ENOMSG;
     }
 
     // get the FS
@@ -93,7 +93,7 @@ int parse_fc(isotp_ctx_t ctx,
     default:
         // invalid FS
         // @ref ISO-15765-2:2016, section 9.6.5.2
-        return -EBADMSG;
+        return -ISOTP_EBADMSG;
     }
 
     // get the BS
@@ -104,7 +104,7 @@ int parse_fc(isotp_ctx_t ctx,
     *stmin_usec = fc_stmin_parameter_to_usec(ctx->can_frame[ae_l + 2]);
 
     printbuf("Recv FC", ctx->can_frame, ctx->can_frame_len);
-    return EOK;
+    return ISOTP_EOK;
 }
 
 int prepare_fc(isotp_ctx_t ctx,
@@ -112,7 +112,7 @@ int prepare_fc(isotp_ctx_t ctx,
                const uint8_t blocksize,
                const int stmin_usec) {
     if (ctx == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     int ae_l = address_extension_len(ctx->addressing_mode);
@@ -141,10 +141,10 @@ int prepare_fc(isotp_ctx_t ctx,
 
     case ISOTP_FC_FLOWSTATUS_NULL:
     case ISOTP_FC_FLOWSTATUS_LAST:
-        return -EINVAL;
+        return -ISOTP_EINVAL;
 
     default:
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
     ctx->can_frame_len++;
 

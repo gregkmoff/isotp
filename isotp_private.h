@@ -32,16 +32,13 @@
 #include <can/can.h>
 #include <platform_time.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 
 /**
  * @ref ISO-15765-2:2016
  *
  * Implementation of the ISOTP protocol used for Unified Diagnostic Services.
  */
-
-#ifndef EOK
-#define EOK (0)
-#endif  // EOK
 
 #define PCI_MASK (0xf0)
 #define SF_PCI   (0x00)
@@ -217,10 +214,10 @@ int prepare_ff(isotp_ctx_t ctx,
  * on success, the number of bytes added to the SF (should be equal to
  *             the send_buf_len parameter)
  * otherwise,
- *     -EINVAL = a parameter is invalid
- *     -ERANGE = the send_buf_len is an invalid value
- *     -EOVERFLOW = the send_buf_len is too big for the CAN frame
- *     -EFAULT = something within the context is faulty
+ *     -ISOTP_EINVAL = a parameter is invalid
+ *     -ISOTP_ERANGE = the send_buf_len is an invalid value
+ *     -ISOTP_EOVERFLOW = the send_buf_len is too big for the CAN frame
+ *     -ISOTP_EFAULT = something within the context is faulty
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
@@ -238,10 +235,10 @@ int prepare_sf(isotp_ctx_t ctx,
  * @returns
  * on success, length of the received data written to the buffer
  * otherwise,
- *     -EINVAL = a parameter is invalid
- *     -ERANGE = the recv_buf_sz is not a supported or valid value
- *     -EBADMSG = the CAN frame does not contain an ISOTP SF
- *     -ENOTSUP = the ISOTP SF is not a supported format
+ *     -ISOTP_EINVAL = a parameter is invalid
+ *     -ISOTP_ERANGE = the recv_buf_sz is not a supported or valid value
+ *     -ISOTP_EBADMSG = the CAN frame does not contain an ISOTP SF
+ *     -ISOTP_ENOTSUP = the ISOTP SF is not a supported format
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
@@ -260,10 +257,10 @@ int parse_sf(isotp_ctx_t ctx,
  * @returns
  * on success, 0
  * otherwise,
- *     -EINVAL = a parameter is invalid
- *     -EMSGSIZE = the CAN frame is too small to be an FC
- *     -ENOMSG = the CAN frame does not contain an FC
- *     -EBADMSG = the ISOTP FC contains an invalid flowstatus
+ *     -ISOTP_EINVAL = a parameter is invalid
+ *     -ISOTP_EMSGSIZE = the CAN frame is too small to be an FC
+ *     -ISOTP_ENOMSG = the CAN frame does not contain an FC
+ *     -ISOTP_EBADMSG = the ISOTP FC contains an invalid flowstatus
  *     <0 = other error
  *     If any error occurs the update parameters are all invalid
  */
@@ -285,7 +282,7 @@ int parse_fc(isotp_ctx_t ctx,
  * @return
  * on success, 0
  * otherwise,
- *     -EINVAL = a parameter is invalid
+ *     -ISOTP_EINVAL = a parameter is invalid
  *     <0 = other error
  */
 int prepare_fc(isotp_ctx_t ctx,

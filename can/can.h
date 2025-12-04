@@ -68,7 +68,7 @@ int can_max_dlc(const can_format_t format);
  * @param buf - pointer to the buffer containing data for a CAN frame
  * @param format - what format the CAN frame should be
  * @returns
- *   EOK - CAN frame was initialized
+ *   ISOTP_EOK - CAN frame was initialized
  *   other - error code, CAN frame is invalid
  */
 int zero_can_frame(uint8_t* buf, const can_format_t format);
@@ -118,7 +118,7 @@ int pad_can_frame_len(uint8_t* buf, const int buf_len, const can_format_t format
  * @param dlc - Data Length Code (DLC) to convert
  * @param format - CAN frame format
  * @returns
- * -EINVAL   - invalid DLC or CAN frame format
+ * -ISOTP_EINVAL   - invalid DLC or CAN frame format
  * othersise - conversion succeeded;
  *             the value of the datalen (>=0) for the DLC is returned
  */
@@ -131,7 +131,7 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format);
  * @param datalen - length of the CAN frame, in bytes
  * @param format - CAN frame format
  * @returns
- * -EINVAL   - invalid data length or CAN frame format
+ * -ISOTP_EINVAL   - invalid data length or CAN frame format
  * otherwise - conversion succeeded
  *             the value of the DLC (>=0) for the data length is returned
  */

@@ -30,7 +30,6 @@
 #include <string.h>
 #include <setjmp.h>
 #include <cmocka.h>
-#include <errno.h>
 
 #include <can/can.h>
 #include <isotp.h>
@@ -72,14 +71,14 @@ static void test_address_extension_len_null_mode(void** state) {
     (void)state;
 
     int rc = address_extension_len(NULL_ISOTP_ADDRESSING_MODE);
-    assert_int_equal(rc, -EFAULT);
+    assert_int_equal(rc, -ISOTP_EFAULT);
 }
 
 static void test_address_extension_len_last_mode(void** state) {
     (void)state;
 
     int rc = address_extension_len(LAST_ISOTP_ADDRESSING_MODE);
-    assert_int_equal(rc, -EFAULT);
+    assert_int_equal(rc, -ISOTP_EFAULT);
 }
 
 static void test_address_extension_len_invalid_mode(void** state) {
@@ -87,7 +86,7 @@ static void test_address_extension_len_invalid_mode(void** state) {
 
     // Test with an invalid value beyond LAST_ISOTP_ADDRESSING_MODE
     int rc = address_extension_len((isotp_addressing_mode_t)100);
-    assert_int_equal(rc, -EFAULT);
+    assert_int_equal(rc, -ISOTP_EFAULT);
 }
 
 // ============================================================================
@@ -158,10 +157,10 @@ static void test_max_datalen_invalid_addressing_mode(void** state) {
     (void)state;
 
     int rc = max_datalen(NULL_ISOTP_ADDRESSING_MODE, CAN_FORMAT);
-    assert_int_equal(rc, -EFAULT);
+    assert_int_equal(rc, -ISOTP_EFAULT);
 
     rc = max_datalen(LAST_ISOTP_ADDRESSING_MODE, CANFD_FORMAT);
-    assert_int_equal(rc, -EFAULT);
+    assert_int_equal(rc, -ISOTP_EFAULT);
 }
 
 static void test_max_datalen_invalid_can_format(void** state) {

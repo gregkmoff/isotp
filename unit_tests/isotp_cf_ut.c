@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -78,14 +77,14 @@ static void parse_cf_invalid_parameters(void** state) {
     assert_true(ctx != NULL);
     uint8_t buf[64];
 
-    assert_true(parse_cf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(parse_cf(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(parse_cf(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(parse_cf(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
-    assert_true(parse_cf(ctx, buf, -1) == -ERANGE);
-    assert_true(parse_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(parse_cf(ctx, buf, -1) == -ISOTP_ERANGE);
+    assert_true(parse_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     ctx->total_datalen = sizeof(buf) + 1;
-    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ENOBUFS);
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ISOTP_ENOBUFS);
 
     free(ctx);
 }
@@ -99,8 +98,8 @@ static void parse_cf_invalid_ael(void** state) {
 
     ctx->total_datalen = sizeof(buf);
 
-    will_return(address_extension_len, -ETIME);
-    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ETIME);
+    will_return(address_extension_len, -ISOTP_ETIME);
+    assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ISOTP_ETIME);
 
     free(ctx);
 }
@@ -136,7 +135,7 @@ static void parse_cf_invalid_sn(void** state) {
         ctx->sequence_num = (i + 1) & (0x0000000fU);
 
         will_return(address_extension_len, 0);
-        assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ECONNABORTED);
+        assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ISOTP_ECONNABORTED);
         assert_true(ctx->sequence_num = INT_MAX);
         assert_true(ctx->remaining_datalen = INT_MAX);
     }
@@ -185,11 +184,11 @@ static void prepare_cf_invalid_parameters(void** state) {
     uint8_t buf[64];
     memset(buf, 0, sizeof(buf));
 
-    assert_true(prepare_cf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(prepare_cf(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(prepare_cf(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(prepare_cf(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
-    assert_true(prepare_cf(ctx, buf, -1) == -ERANGE);
-    assert_true(prepare_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(prepare_cf(ctx, buf, -1) == -ISOTP_ERANGE);
+    assert_true(prepare_cf(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     free(ctx);
 }
@@ -204,7 +203,7 @@ static void prepare_cf_invalid_total_datalen(void** state) {
 
     ctx->total_datalen = sizeof(buf) + 1;
 
-    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -EMSGSIZE);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ISOTP_EMSGSIZE);
 
     free(ctx);
 }
@@ -219,8 +218,8 @@ static void prepare_cf_invalid_ael(void** state) {
 
     ctx->total_datalen = sizeof(buf);
 
-    will_return(address_extension_len, -ETIME);
-    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+    will_return(address_extension_len, -ISOTP_ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ISOTP_ETIME);
 
     free(ctx);
 }
@@ -236,8 +235,8 @@ static void prepare_cf_get_ae_fail(void** state) {
     ctx->total_datalen = sizeof(buf);
 
     will_return(address_extension_len, 1);
-    will_return(get_isotp_address_extension, -ETIME);
-    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+    will_return(get_isotp_address_extension, -ISOTP_ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ISOTP_ETIME);
 
     free(ctx);
 }
@@ -254,8 +253,8 @@ static void prepare_cf_pad_can_frame_fail(void** state) {
 
     will_return(address_extension_len, 0);
     will_return(can_max_datalen, 64);
-    will_return(pad_can_frame_len, -ETIME);
-    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ETIME);
+    will_return(pad_can_frame_len, -ISOTP_ETIME);
+    assert_true(prepare_cf(ctx, buf, sizeof(buf)) == -ISOTP_ETIME);
 
     free(ctx);
 }

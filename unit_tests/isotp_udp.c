@@ -37,6 +37,7 @@
 
 #include <can/can.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <platform_time.h>
 
 #define CLIENT (0)
@@ -85,7 +86,7 @@ static int canudp_rx_f(void* rxfn_ctx,
         break;
     case 0:
         printf("TIMEOUT\n");
-        rc = -1 * ETIMEDOUT;
+        rc = -1 * ISOTP_ETIMEDOUT;
         break;
     default:
         cc->peer_addr_len = sizeof(cc->peer_addr);
@@ -219,7 +220,7 @@ int main(int argc, char** argv) {
     isotp_ctx_t ctx = calloc(1, isotp_ctx_t_size());
     if (ctx == NULL) {
         printf("FAILED to allocate\n");
-        return (-1) * ENOMEM;
+        return (-1) * ISOTP_ENOMEM;
     }
     rc = isotp_ctx_init(ctx, CANFD_FORMAT, ISOTP_NORMAL_ADDRESSING_MODE, 0,
                             NULL, &cc, &canudp_rx_f, &canudp_tx_f);
@@ -271,7 +272,7 @@ int main(int argc, char** argv) {
             do {
             rc = isotp_send(ctx, buf, sizeof(buf), 1000);
             printf("isotp_send() %d\n", rc);
-            if (rc == (-1 * ETIMEDOUT)) {
+            if (rc == (-1 * ISOTP_ETIMEDOUT)) {
                 platform_sleep_usec(500000);
             }
             } while (rc < 0);

@@ -23,12 +23,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 #include <platform_time.h>
 
@@ -91,7 +91,7 @@ static int send_cfs(isotp_ctx_t ctx,
         }
     }
 
-    return EOK;
+    return ISOTP_EOK;
 }
 
 static int send_ff(isotp_ctx_t ctx,
@@ -130,7 +130,7 @@ static int send_ff(isotp_ctx_t ctx,
                                       ctx->timeouts.n_as : ctx->timeouts.n_bs;
 
         if (timeout_expired(ctx, applicable_timeout)) {
-            return -ETIMEDOUT;
+            return -ISOTP_ETIMEDOUT;
         }
 
         // wait for FC
@@ -175,7 +175,7 @@ static int send_ff(isotp_ctx_t ctx,
 
                 // Enforce maximum FC.WAIT frames if configured
                 if ((ctx->fc_wait_max > 0) && (ctx->fc_wait_count > ctx->fc_wait_max)) {
-                    return -ECONNABORTED;
+                    return -ISOTP_ECONNABORTED;
                 }
 
                 // Restart N_Bs timer for next FC.WAIT
@@ -183,16 +183,16 @@ static int send_ff(isotp_ctx_t ctx,
                 continue;
 
             case ISOTP_FC_FLOWSTATUS_OVFLW:
-                return -ECONNABORTED;
+                return -ISOTP_ECONNABORTED;
 
             case ISOTP_FC_FLOWSTATUS_NULL:
             case ISOTP_FC_FLOWSTATUS_LAST:
             default:
-                return -EBADMSG;
+                return -ISOTP_EBADMSG;
         }
     }
 
-    return EOK;
+    return ISOTP_EOK;
 }
 
 int isotp_send(isotp_ctx_t ctx,
@@ -201,11 +201,11 @@ int isotp_send(isotp_ctx_t ctx,
                const uint64_t timeout) {
     if ((ctx == NULL) ||
         (send_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     int rc = 0;

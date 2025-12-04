@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -93,11 +92,11 @@ static void parse_ff_invalid_params(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[256];
 
-    assert_true(parse_ff(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(parse_ff(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(parse_ff(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(parse_ff(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
-    assert_true(parse_ff(ctx, buf, -1) == -ERANGE);
-    assert_true(parse_ff(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(parse_ff(ctx, buf, -1) == -ISOTP_ERANGE);
+    assert_true(parse_ff(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     free(ctx);
 }
@@ -113,7 +112,7 @@ static void parse_ff_invalid_pci(void** state) {
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
     ctx->can_frame_len = 8;
 
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     free(ctx);
 }
@@ -131,7 +130,7 @@ static void parse_ff_invalid_ffdl(void** state) {
     ctx->can_frame_len = 8;
     ctx->can_frame[0] = FF_PCI;
     ctx->can_frame[1] = 0x01;
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EFAULT);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EFAULT);
 
     // FF_DL too short
     ctx->address_extension_len = 0;
@@ -141,7 +140,7 @@ static void parse_ff_invalid_ffdl(void** state) {
     ctx->can_frame[0] = FF_PCI;
     ctx->can_frame[1] = 0x01;
     will_return(can_max_datalen, 8);
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     // FF_DL too big
     ctx->address_extension_len = 0;
@@ -151,7 +150,7 @@ static void parse_ff_invalid_ffdl(void** state) {
     ctx->can_frame[0] = FF_PCI | 0x01;
     ctx->can_frame[1] = 0xff;
     will_return(can_max_datalen, 64);
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EOVERFLOW);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EOVERFLOW);
 
     // FF_DL with escape too big
     ctx->address_extension_len = 0;
@@ -162,7 +161,7 @@ static void parse_ff_invalid_ffdl(void** state) {
     ctx->can_frame[1] = 0x00;
     ctx->can_frame[2] = 0x01;
     will_return(can_max_datalen, 64);
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EOVERFLOW);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EOVERFLOW);
 
     // FF_DL with escape too short
     ctx->address_extension_len = 0;
@@ -173,7 +172,7 @@ static void parse_ff_invalid_ffdl(void** state) {
     ctx->can_frame[1] = 0x00;
     ctx->can_frame[5] = 0x01;
     will_return(can_max_datalen, 64);
-    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_ff(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     free(ctx);
 }
@@ -280,8 +279,8 @@ static void prepare_ff_invalid_parameters(void** state) {
     uint8_t buf[64];
     memset(buf, 0, sizeof(buf));
 
-    assert_true(prepare_ff(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(prepare_ff(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(prepare_ff(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(prepare_ff(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
     free(ctx);
 }
@@ -294,7 +293,7 @@ static void prepare_ff_invalid_ffdlmin(void** state) {
     memset(buf, 0, sizeof(buf));
 
     ctx->can_format = LAST_CAN_FORMAT;
-    assert_true(prepare_ff(ctx, buf, sizeof(buf)) == -EFAULT);
+    assert_true(prepare_ff(ctx, buf, sizeof(buf)) == -ISOTP_EFAULT);
 
     free(ctx);
 }
@@ -309,25 +308,25 @@ static void prepare_ff_invalid_datalen(void** state) {
     ctx->can_format = CAN_FORMAT;
     ctx->address_extension_len = 0;
     will_return(can_max_datalen, 8);
-    assert_true(prepare_ff(ctx, buf, 7) == -ERANGE);
+    assert_true(prepare_ff(ctx, buf, 7) == -ISOTP_ERANGE);
 
     ctx->can_format = CAN_FORMAT;
     ctx->address_extension_len = 1;
     will_return(can_max_datalen, 8);
-    assert_true(prepare_ff(ctx, buf, 6) == -ERANGE);
+    assert_true(prepare_ff(ctx, buf, 6) == -ISOTP_ERANGE);
 
     ctx->can_format = CANFD_FORMAT;
     ctx->address_extension_len = 0;
     will_return(can_max_datalen, 64);
-    assert_true(prepare_ff(ctx, buf, 62) == -ERANGE);
+    assert_true(prepare_ff(ctx, buf, 62) == -ISOTP_ERANGE);
 
     ctx->can_format = CANFD_FORMAT;
     ctx->address_extension_len = 1;
     will_return(can_max_datalen, 64);
-    assert_true(prepare_ff(ctx, buf, 61) == -ERANGE);
+    assert_true(prepare_ff(ctx, buf, 61) == -ISOTP_ERANGE);
 
     will_return(can_max_datalen, 64);
-    assert_true(prepare_ff(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(prepare_ff(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     free(ctx);
 }

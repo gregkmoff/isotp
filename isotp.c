@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <errno.h>
 #include <stdlib.h>
 #ifdef DEBUG
 #include <stdio.h>
@@ -32,6 +31,7 @@
 
 #include <can/can.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 int isotp_ctx_init(isotp_ctx_t ctx,
@@ -45,7 +45,7 @@ int isotp_ctx_init(isotp_ctx_t ctx,
     if ((ctx == NULL) ||
         (can_rx_f == NULL) ||
         (can_tx_f == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     (void)memset(ctx, 0, isotp_ctx_t_size());
@@ -60,7 +60,7 @@ int isotp_ctx_init(isotp_ctx_t ctx,
         case NULL_CAN_FORMAT:
         case LAST_CAN_FORMAT:
         default:
-            return -EFAULT;
+            return -ISOTP_EFAULT;
     }
 
     switch (isotp_addressing_mode) {
@@ -79,7 +79,7 @@ int isotp_ctx_init(isotp_ctx_t ctx,
         case NULL_ISOTP_ADDRESSING_MODE:
         case LAST_ISOTP_ADDRESSING_MODE:
         default:
-            return -EFAULT;
+            return -ISOTP_EFAULT;
     }
 
     ctx->fc_wait_max = max_fc_wait_frames;
@@ -106,7 +106,7 @@ int isotp_ctx_init(isotp_ctx_t ctx,
 
 int isotp_ctx_reset(isotp_ctx_t ctx) {
     if (ctx == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     ctx->total_datalen = 0;
@@ -117,12 +117,12 @@ int isotp_ctx_reset(isotp_ctx_t ctx) {
     ctx->last_fc_wait_time = 0;
     ctx->fc_wait_count = 0;
 
-    return EOK;
+    return ISOTP_EOK;
 }
 
 int get_isotp_address_extension(const isotp_ctx_t ctx) {
     if (ctx == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     return ctx->address_extension;
@@ -130,11 +130,11 @@ int get_isotp_address_extension(const isotp_ctx_t ctx) {
 
 int set_isotp_address_extension(isotp_ctx_t ctx, const uint8_t ae) {
     if (ctx == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     ctx->address_extension = ae;
-    return EOK;
+    return ISOTP_EOK;
 }
 
 size_t isotp_ctx_t_size(void) {

@@ -34,7 +34,7 @@
  * Suspends execution for the specified duration in microseconds.
  *
  * @param usec Duration to sleep in microseconds
- * @return 0 on success, negative errno value on error
+ * @return 0 on success, -EFAULT on error
  */
 int platform_sleep_usec(uint64_t usec);
 

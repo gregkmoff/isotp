@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -31,6 +30,7 @@
 
 #include <can/can.h>
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 #define PCI_MASK (0xf0)
@@ -40,7 +40,7 @@
 static int parse_sf_with_esc(isotp_ctx_t ctx,
                              uint8_t** dp) {
     if (dp == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
     *dp = NULL;
 
@@ -54,7 +54,7 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
         /* For escape sequence, SF_DL must be >= 8 */
         if ((sf_dl <= 7U) ||
             (sf_dl > (uint8_t)(ctx->can_frame_len - 2))) {
-            return -ENOTSUP;
+            return -ISOTP_ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[2]);
         }
@@ -67,7 +67,7 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
         /* For escape sequence, SF_DL must be >= 7 */
         if ((sf_dl <= 6U) ||
             (sf_dl > (uint8_t)(ctx->can_frame_len - 3))) {
-            return -ENOTSUP;
+            return -ISOTP_ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[3]);
             ctx->address_extension = ctx->can_frame[0];
@@ -75,7 +75,7 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
         break;
 
     default:
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
 
     return (int)sf_dl;
@@ -84,7 +84,7 @@ static int parse_sf_with_esc(isotp_ctx_t ctx,
 static int parse_sf_no_esc(isotp_ctx_t ctx,
                            uint8_t** dp) {
     if (dp == NULL) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
     *dp = NULL;
 
@@ -96,7 +96,7 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
         sf_dl = ctx->can_frame[0] & SF_DL_PCI_MASK;
         /* MISRA Rule 14.4: Check for valid SF_DL range (1-7 for no escape) */
         if ((sf_dl == 0U) || (sf_dl > 7U)) {
-            return -ENOTSUP;
+            return -ISOTP_ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[1]);
         }
@@ -107,7 +107,7 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
         sf_dl = ctx->can_frame[1] & SF_DL_PCI_MASK;
         /* MISRA Rule 14.4: Check for valid SF_DL range (1-6 for no escape) */
         if ((sf_dl == 0U) || (sf_dl > 6U)) {
-            return -ENOTSUP;
+            return -ISOTP_ENOTSUP;
         } else {
             *dp = &(ctx->can_frame[2]);
             ctx->address_extension = ctx->can_frame[0];
@@ -115,7 +115,7 @@ static int parse_sf_no_esc(isotp_ctx_t ctx,
         break;
 
     default:
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
 
     return (int)sf_dl;
@@ -125,22 +125,22 @@ int parse_sf(isotp_ctx_t ctx,
              uint8_t* recv_buf_p,
              const int recv_buf_sz) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     // verify the length of the CAN frame
     if (ctx->can_frame_len > can_max_datalen(CANFD_FORMAT)) {
-        return -EBADMSG;
+        return -ISOTP_EBADMSG;
     }
 
     // verify that the frame contains an ISOTP SF header
     if ((ctx->can_frame[ctx->address_extension_len] & PCI_MASK) != SF_PCI) {
         // not an SF
-        return -EBADMSG;
+        return -ISOTP_EBADMSG;
     }
 
     int sf_dl = 0;
@@ -156,11 +156,11 @@ int parse_sf(isotp_ctx_t ctx,
     }
 
     if (dp == NULL) {
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
 
     if (sf_dl > recv_buf_sz) {
-        return -ENOBUFS;
+        return -ISOTP_ENOBUFS;
     }
 
     memcpy(recv_buf_p, dp, sf_dl);
@@ -175,11 +175,11 @@ int prepare_sf(isotp_ctx_t ctx,
                const uint8_t* send_buf_p,
                const int send_buf_len) {
     if ((ctx == NULL) || (send_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((send_buf_len < 0) || (send_buf_len > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
@@ -209,7 +209,7 @@ int prepare_sf(isotp_ctx_t ctx,
             dp = &(ctx->can_frame[2]);
             ctx->can_frame_len += 2;
         } else {
-            return -EOVERFLOW;
+            return -ISOTP_EOVERFLOW;
         }
         break;
 
@@ -236,17 +236,17 @@ int prepare_sf(isotp_ctx_t ctx,
             ctx->total_datalen += 2;
             ctx->can_frame_len += 2;
         } else {
-            return -EOVERFLOW;
+            return -ISOTP_EOVERFLOW;
         }
         break;
 
     default:
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
 
     // copy the payload data and pad the CAN frame (if needed)
     if (dp == NULL) {
-        return -EFAULT;
+        return -ISOTP_EFAULT;
     }
 
     memcpy(dp, send_buf_p, send_buf_len);

@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -361,10 +360,10 @@ static void parse_fc_invalid_parameters(void** state) {
     uint8_t blocksize;
     int stmin_usec;
 
-    assert_true(parse_fc(NULL, &flowstatus, &blocksize, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(ctx, NULL, &blocksize, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(ctx, &flowstatus, NULL, &stmin_usec) == -EINVAL);
-    assert_true(parse_fc(ctx, &flowstatus, &blocksize, NULL) == -EINVAL);
+    assert_true(parse_fc(NULL, &flowstatus, &blocksize, &stmin_usec) == -ISOTP_EINVAL);
+    assert_true(parse_fc(ctx, NULL, &blocksize, &stmin_usec) == -ISOTP_EINVAL);
+    assert_true(parse_fc(ctx, &flowstatus, NULL, &stmin_usec) == -ISOTP_EINVAL);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, NULL) == -ISOTP_EINVAL);
 
     free(ctx);
 }
@@ -378,8 +377,8 @@ static void parse_fc_invalid_ael(void** state) {
     uint8_t blocksize;
     int stmin_usec;
 
-    will_return(address_extension_len, -ETIME);
-    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ETIME);
+    will_return(address_extension_len, -ISOTP_ETIME);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ISOTP_ETIME);
 
     free(ctx);
 }
@@ -396,7 +395,7 @@ static void parse_fc_invalid_frame_len(void** state) {
     ctx->can_frame_len = 2;
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -EMSGSIZE);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ISOTP_EMSGSIZE);
 
     free(ctx);
 }
@@ -414,7 +413,7 @@ static void parse_fc_invalid_pci(void** state) {
     memset(ctx->can_frame, 0xde, sizeof(ctx->can_frame));
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ENOMSG);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ISOTP_ENOMSG);
 
     free(ctx);
 }
@@ -432,7 +431,7 @@ static void parse_fc_invalid_fs(void** state) {
     ctx->can_frame[0] = FC_PCI | 0x07;
 
     will_return(address_extension_len, 0);
-    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -EBADMSG);
+    assert_true(parse_fc(ctx, &flowstatus, &blocksize, &stmin_usec) == -ISOTP_EBADMSG);
 
     free(ctx);
 }
@@ -488,7 +487,7 @@ static void parse_fc_success(void** state) {
 static void prepare_fc_invalid_parameters(void** state) {
     (void)state;
 
-    assert_true(prepare_fc(NULL, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -EINVAL);
+    assert_true(prepare_fc(NULL, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ISOTP_EINVAL);
 }
 
 static void prepare_fc_invalid_ael(void** state) {
@@ -497,8 +496,8 @@ static void prepare_fc_invalid_ael(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     assert_true(ctx != NULL);
 
-    will_return(address_extension_len, -ETIME);
-    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ETIME);
+    will_return(address_extension_len, -ISOTP_ETIME);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ISOTP_ETIME);
 
     free(ctx);
 }
@@ -510,9 +509,9 @@ static void prepare_fc_invalid_flowstatus(void** state) {
     assert_true(ctx != NULL);
 
     will_return(address_extension_len, 0);
-    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -EINVAL);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_NULL, 0, 0) == -ISOTP_EINVAL);
     will_return(address_extension_len, 0);
-    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_LAST, 0, 0) == -EINVAL);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_LAST, 0, 0) == -ISOTP_EINVAL);
 
     free(ctx);
 }
@@ -572,8 +571,8 @@ static void prepare_fc_pad_frame_failure(void** state) {
     assert_true(ctx != NULL);
 
     will_return(address_extension_len, 0);
-    will_return(pad_can_frame_len, -ETIME);
-    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == -ETIME);
+    will_return(pad_can_frame_len, -ISOTP_ETIME);
+    assert_true(prepare_fc(ctx, ISOTP_FC_FLOWSTATUS_OVFLW, 0x30, MAX_STMIN_USEC + 1) == -ISOTP_ETIME);
 
     free(ctx);
 }

@@ -23,8 +23,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdlib.h>
 
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>

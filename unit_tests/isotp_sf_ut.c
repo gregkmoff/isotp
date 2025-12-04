@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -69,8 +68,8 @@ static void prepare_sf_invalid_parameters(void** state) {
     uint8_t buf[64];
     memset(buf, 0, sizeof(buf));
 
-    assert_true(prepare_sf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(prepare_sf(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(prepare_sf(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(prepare_sf(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
     free(ctx);
 }
@@ -82,8 +81,8 @@ static void prepare_sf_invalid_length(void** state) {
     uint8_t buf[64];
     memset(buf, 0, sizeof(buf));
 
-    assert_true(prepare_sf(ctx, buf, -1) == -ERANGE);
-    assert_true(prepare_sf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(prepare_sf(ctx, buf, -1) == -ISOTP_ERANGE);
+    assert_true(prepare_sf(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     free(ctx);
 }
@@ -97,7 +96,7 @@ static void prepare_sf_invalid_addressing_mode(void** state) {
 
     ctx->addressing_mode = NULL_ISOTP_ADDRESSING_MODE;
 
-    assert_true(prepare_sf(ctx, buf, sizeof(buf)) == -EFAULT);
+    assert_true(prepare_sf(ctx, buf, sizeof(buf)) == -ISOTP_EFAULT);
 
     free(ctx);
 }
@@ -111,19 +110,19 @@ static void prepare_sf_overflow(void** state) {
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->can_max_datalen = 8;
-    assert_true(prepare_sf(ctx, buf, 9) == -EOVERFLOW);
+    assert_true(prepare_sf(ctx, buf, 9) == -ISOTP_EOVERFLOW);
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->can_max_datalen = 64;
-    assert_true(prepare_sf(ctx, buf, 63) == -EOVERFLOW);
+    assert_true(prepare_sf(ctx, buf, 63) == -ISOTP_EOVERFLOW);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->can_max_datalen = 8;
-    assert_true(prepare_sf(ctx, buf, 7) == -EOVERFLOW);
+    assert_true(prepare_sf(ctx, buf, 7) == -ISOTP_EOVERFLOW);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->can_max_datalen = 64;
-    assert_true(prepare_sf(ctx, buf, 62) == -EOVERFLOW);
+    assert_true(prepare_sf(ctx, buf, 62) == -ISOTP_EOVERFLOW);
 
     free(ctx);
 }
@@ -217,8 +216,8 @@ static void parse_sf_invalid_parameters(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
 
-    assert_true(parse_sf(NULL, buf, sizeof(buf)) == -EINVAL);
-    assert_true(parse_sf(ctx, NULL, sizeof(buf)) == -EINVAL);
+    assert_true(parse_sf(NULL, buf, sizeof(buf)) == -ISOTP_EINVAL);
+    assert_true(parse_sf(ctx, NULL, sizeof(buf)) == -ISOTP_EINVAL);
 
     free(ctx);
 }
@@ -229,8 +228,8 @@ static void parse_sf_invalid_length(void** state) {
     isotp_ctx_t ctx = calloc(1, sizeof(*ctx));
     uint8_t buf[64];
 
-    assert_true(parse_sf(ctx, buf, -1) == -ERANGE);
-    assert_true(parse_sf(ctx, buf, MAX_TX_DATALEN + 1) == -ERANGE);
+    assert_true(parse_sf(ctx, buf, -1) == -ISOTP_ERANGE);
+    assert_true(parse_sf(ctx, buf, MAX_TX_DATALEN + 1) == -ISOTP_ERANGE);
 
     free(ctx);
 }
@@ -243,11 +242,11 @@ static void parse_sf_can_frame_length(void** state) {
 
     ctx->can_frame_len = -1;
     will_return(can_max_datalen, 64);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     ctx->can_frame_len = 9;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     free(ctx);
 }
@@ -262,14 +261,14 @@ static void parse_sf_bad_msg(void** state) {
     ctx->address_extension_len = 0;
     ctx->can_frame[0] = ~SF_PCI;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     ctx->can_frame_len = 8;
     ctx->address_extension_len = 1;
     ctx->can_frame[0] = SF_PCI;
     ctx->can_frame[1] = ~SF_PCI;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -EBADMSG);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_EBADMSG);
 
     free(ctx);
 }
@@ -285,14 +284,14 @@ static void parse_sf_no_esc(void** state) {
     ctx->can_frame_len = 8;
     ctx->can_frame[0] = 0x00;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->address_extension_len = 0;
     ctx->can_frame_len = 8;
     ctx->can_frame[0] = 0x08;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->address_extension_len = 1;
@@ -300,7 +299,7 @@ static void parse_sf_no_esc(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 0x00;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->address_extension_len = 1;
@@ -308,7 +307,7 @@ static void parse_sf_no_esc(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 0x07;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     free(ctx);
 }
@@ -325,7 +324,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 0;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->address_extension_len = 0;
@@ -333,7 +332,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 7;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_NORMAL_ADDRESSING_MODE;
     ctx->address_extension_len = 0;
@@ -341,7 +340,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 8;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->address_extension_len = 1;
@@ -350,7 +349,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[1] = 0x00;
     ctx->can_frame[2] = 0;
     will_return(can_max_datalen, 9);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->address_extension_len = 1;
@@ -359,7 +358,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[1] = 0x00;
     ctx->can_frame[2] = 6;
     will_return(can_max_datalen, 9);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     ctx->addressing_mode = ISOTP_EXTENDED_ADDRESSING_MODE;
     ctx->address_extension_len = 1;
@@ -368,7 +367,7 @@ static void parse_sf_with_esc(void** state) {
     ctx->can_frame[1] = 0x00;
     ctx->can_frame[2] = 7;
     will_return(can_max_datalen, 9);
-    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ENOTSUP);
+    assert_true(parse_sf(ctx, buf, sizeof(buf)) == -ISOTP_ENOTSUP);
 
     free(ctx);
 }
@@ -396,7 +395,7 @@ static void parse_sf_no_esc_success(void** state) {
     ctx->address_extension_len = 0;
     ctx->can_frame[0] = 0x07;
     will_return(can_max_datalen, 8);
-    assert_true(parse_sf(ctx, buf, 6) == -ENOBUFS);
+    assert_true(parse_sf(ctx, buf, 6) == -ISOTP_ENOBUFS);
 
     memset(ctx->can_frame, 0xe8, sizeof(ctx->can_frame));
     memset(buf, 0, sizeof(buf));
@@ -438,7 +437,7 @@ static void parse_sf_with_esc_success(void** state) {
     ctx->can_frame[0] = 0x00;
     ctx->can_frame[1] = 62;
     will_return(can_max_datalen, 64);
-    assert_true(parse_sf(ctx, buf, 61) == -ENOBUFS);
+    assert_true(parse_sf(ctx, buf, 61) == -ISOTP_ENOBUFS);
 
     memset(ctx->can_frame, 0xe8, sizeof(ctx->can_frame));
     memset(buf, 0, sizeof(buf));

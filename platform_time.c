@@ -26,8 +26,7 @@
 #include <platform_time.h>
 
 #include <isotp.h>
-
-#include <errno.h>
+#include <isotp_errno.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 // Windows implementation
@@ -63,15 +62,16 @@ uint64_t platform_gettime(void) {
 #include <sys/time.h>
 
 int platform_sleep_usec(uint64_t usec) {
+    int rc = 0;
     struct timespec ts;
     ts.tv_sec = usec / USEC_PER_SEC;
     ts.tv_nsec = (usec % USEC_PER_SEC) * NSEC_PER_USEC;
 
     if (nanosleep(&ts, NULL) != 0) {
-        return -errno;
+        rc = -ISOTP_EFAULT;
     }
 
-    return 0;
+    return rc;
 }
 
 uint64_t platform_gettime(void) {
@@ -84,5 +84,4 @@ uint64_t platform_gettime(void) {
 
     return rc;
 }
-
 #endif

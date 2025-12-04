@@ -23,17 +23,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "can/can.h"
-
-#ifndef EOK
-#define EOK (0)
-#endif  // EOK
+#include <isotp_errno.h>
 
 #define CAN_MAX_DATALEN (8)
 #define CANFD_MAX_DATALEN (64)
@@ -80,7 +76,7 @@ static inline bool valid_can_format(const can_format_t f) {
 int can_max_datalen(const can_format_t format) {
     /* MISRA C:2012 Rule 8.9 - Lookup table at block scope */
     static const int _format_to_max_datalen[NUM_CAN_FORMATS] =
-        { -EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ERANGE };
+        { -ISOTP_EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ISOTP_ERANGE };
     _Static_assert((sizeof(_format_to_max_datalen) / sizeof(_format_to_max_datalen[0])) == (NUM_CAN_FORMATS),
                    "MAX DATALEN FORMATS size mismatch");
     return _format_to_max_datalen[format];
@@ -89,7 +85,7 @@ int can_max_datalen(const can_format_t format) {
 int can_max_dlc(const can_format_t format) {
     /* MISRA C:2012 Rule 8.9 - Lookup table at block scope */
     static const int _format_to_max_dlc[NUM_CAN_FORMATS] =
-        { -EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ERANGE };
+        { -ISOTP_EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ISOTP_ERANGE };
     _Static_assert((sizeof(_format_to_max_dlc) / sizeof(_format_to_max_dlc[0])) == (NUM_CAN_FORMATS),
                    "MAX DLC FORMATS size mismatch");
     return _format_to_max_dlc[format];
@@ -97,12 +93,12 @@ int can_max_dlc(const can_format_t format) {
 
 int zero_can_frame(uint8_t* buf, const can_format_t format) {
     if ((buf == NULL) || !valid_can_format(format)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     (void)memset(buf, 0, can_max_datalen(format));
 
-    return EOK;
+    return ISOTP_EOK;
 }
 
 static int pad_can_frame_internal(uint8_t* buf,
@@ -114,7 +110,7 @@ static int pad_can_frame_internal(uint8_t* buf,
         !valid_can_format(format) ||
         (buf_len < 0) ||
         (buf_len > can_max_datalen(format))) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     // get the DLC for the length of the data
@@ -177,7 +173,7 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format) {
                    "CANFD DLC to DATALEN size mismatch");
 
     if (dlc < 0) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     switch (format) {
@@ -185,20 +181,20 @@ int can_dlc_to_datalen(const int dlc, const can_format_t format) {
         if (dlc <= CAN_MAX_DLC) {
             return CAN_dlc_to_datalen[dlc];
         } else {
-            return -EINVAL;
+            return -ISOTP_EINVAL;
         }
 
     case CANFD_FORMAT:
         if (dlc <= CANFD_MAX_DLC) {
             return CANFD_dlc_to_datalen[dlc];
         } else {
-            return -EINVAL;
+            return -ISOTP_EINVAL;
         }
 
     case NULL_CAN_FORMAT:
     case LAST_CAN_FORMAT:
     default:
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 }
 
@@ -233,7 +229,7 @@ int can_datalen_to_dlc(const int datalen, const can_format_t format) {
                    "CANFD DATALEN to DLC size mismatch");
 
     if (datalen < 0) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     switch (format) {
@@ -241,19 +237,19 @@ int can_datalen_to_dlc(const int datalen, const can_format_t format) {
         if (datalen <= CAN_MAX_DATALEN) {
             return CAN_datalen_to_dlc[datalen];
         } else {
-            return -EINVAL;
+            return -ISOTP_EINVAL;
         }
 
     case CANFD_FORMAT:
         if (datalen <= CANFD_MAX_DATALEN) {
             return CANFD_datalen_to_dlc[datalen];
         } else {
-            return -EINVAL;
+            return -ISOTP_EINVAL;
         }
 
     case NULL_CAN_FORMAT:
     case LAST_CAN_FORMAT:
     default:
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 }

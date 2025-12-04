@@ -23,11 +23,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 static int recv_cfs(isotp_ctx_t ctx,
@@ -36,7 +36,7 @@ static int recv_cfs(isotp_ctx_t ctx,
                     const uint8_t blocksize,
                     const int stmin_usec,
                     const uint64_t timeout) {
-    int rc = EOK;
+    int rc = ISOTP_EOK;
 
     // Start N_Cr timer for waiting for first CF after FF
     // @ref ISO-15765-2:2016, section 9.7, table 16
@@ -68,7 +68,7 @@ static int recv_cfs(isotp_ctx_t ctx,
                ((blocksize == 0) || (bs > 0))) {
             // Check if N_Cr timeout has expired waiting for CF
             if (timeout_expired(ctx, ctx->timeouts.n_cr)) {
-                return -ETIMEDOUT;
+                return -ISOTP_ETIMEDOUT;
             }
 
             rc = ctx->can_rx_f(ctx->can_ctx,
@@ -108,11 +108,11 @@ int isotp_recv(isotp_ctx_t ctx,
                const int stmin_usec,
                const uint64_t timeout) {
     if ((ctx == NULL) || (recv_buf_p == NULL)) {
-        return -EINVAL;
+        return -ISOTP_EINVAL;
     }
 
     if ((recv_buf_sz < 0) || (recv_buf_sz > MAX_TX_DATALEN)) {
-        return -ERANGE;
+        return -ISOTP_ERANGE;
     }
 
     int rc = 0;
@@ -151,7 +151,7 @@ int isotp_recv(isotp_ctx_t ctx,
         case CF_PCI:
         case FC_PCI:
         default:
-            return -ENOMSG;
+            return -ISOTP_ENOMSG;
     }
 
     if (rc < 0) {

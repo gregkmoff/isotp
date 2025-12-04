@@ -23,10 +23,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdlib.h>
 
 #include <isotp.h>
+#include <isotp_errno.h>
 #include <isotp_private.h>
 
 /**
@@ -52,7 +52,7 @@ int max_datalen(const isotp_addressing_mode_t addr_mode,
         if (ae_l < 0) {
             rc = ae_l;
         } else if (can_dl <= ae_l) {
-            rc = -EFAULT;
+            rc = -ISOTP_EFAULT;
         } else {
             rc = can_dl - ae_l;
         }
@@ -66,14 +66,14 @@ int max_datalen(const isotp_addressing_mode_t addr_mode,
  *
  * This function returns either:
  * - Non-negative values: 0 (no extension) or 1 (one byte extension)
- * - Negative values: -EFAULT for invalid addressing modes
+ * - Negative values: -ISOTP_EFAULT for invalid addressing modes
  *
  * The function accepts enum values but returns int to maintain consistency
  * with the error handling pattern used throughout the codebase.
  *
  * @param addr_mode - ISOTP addressing mode (enum type)
  *
- * @return int value: 0, 1, or -EFAULT
+ * @return int value: 0, 1, or -ISOTP_EFAULT
  */
 int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     int rc;
@@ -93,12 +93,12 @@ int address_extension_len(const isotp_addressing_mode_t addr_mode) {
     case NULL_ISOTP_ADDRESSING_MODE:
     case LAST_ISOTP_ADDRESSING_MODE:
         /* invalid addressing mode sentinel values */
-        rc = (int)(-EFAULT);
+        rc = -ISOTP_EFAULT;
         break;
 
     default:
         /* invalid or unknown addressing mode (defensive programming) */
-        rc = (int)(-EFAULT);
+        rc = -ISOTP_EFAULT;
         break;
     }
 

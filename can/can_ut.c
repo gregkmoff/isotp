@@ -24,7 +24,6 @@
 */
 
 #include <stdio.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,6 +32,7 @@
 #include <cmocka.h>
 
 #include "can.h"
+#include <isotp_errno.h>
 
 #ifndef CAN_MAX_DATALEN
 #define CAN_MAX_DATALEN (8)
@@ -54,7 +54,7 @@
  * can_max_datalen() tests
  */
 static const int can_max_datalen_v[NUM_CAN_FORMATS] =
-    { -EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ERANGE };
+    { -ISOTP_EINVAL, CAN_MAX_DATALEN, CANFD_MAX_DATALEN, -ISOTP_ERANGE };
 
 static void can_max_datalen_test(void** state) {
     for (can_format_t f=NULL_CAN_FORMAT;
@@ -68,7 +68,7 @@ static void can_max_datalen_test(void** state) {
  * can_max_dlc() tests
  */
 static const int can_max_dlc_v[NUM_CAN_FORMATS] =
-    { -EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ERANGE };
+    { -ISOTP_EINVAL, CAN_MAX_DLC, CANFD_MAX_DLC, -ISOTP_ERANGE };
 
 static void can_max_dlc_test(void** state) {
     for (can_format_t f=NULL_CAN_FORMAT;
@@ -82,14 +82,14 @@ static void can_max_dlc_test(void** state) {
  * zero_can_frame() tests
  */
 static void zero_can_frame_test(void** state) {
-    assert_true(zero_can_frame(NULL, NULL_CAN_FORMAT) == -EINVAL);
+    assert_true(zero_can_frame(NULL, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
 
     uint8_t chk[64] = {1};
 
     uint8_t buf[64] = {1};
-    assert_true(zero_can_frame(buf, NULL_CAN_FORMAT) == -EINVAL);
+    assert_true(zero_can_frame(buf, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
     assert_memory_equal(buf, chk, 64);
-    assert_true(zero_can_frame(buf, LAST_CAN_FORMAT) == -EINVAL);
+    assert_true(zero_can_frame(buf, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
     assert_memory_equal(buf, chk, 64);
 
     uint8_t zero[64] = {0};
@@ -109,8 +109,8 @@ static const int can_dlc_to_datalen_v[CAN_MAX_DLC + 1] =
     {0, 1, 2, 3, 4, 5, 6, 7, 8};
 
 static void can_dlc_to_datalen_can_format_test(void** state) {
-    assert_true(can_dlc_to_datalen(-1, CAN_FORMAT) == -EINVAL);
-    assert_true(can_dlc_to_datalen(CAN_MAX_DLC + 1, CAN_FORMAT) == -EINVAL);
+    assert_true(can_dlc_to_datalen(-1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_dlc_to_datalen(CAN_MAX_DLC + 1, CAN_FORMAT) == -ISOTP_EINVAL);
 
     for (int dlc = 0; dlc <= CAN_MAX_DLC; dlc++) {
         assert_true(can_dlc_to_datalen(dlc, CAN_FORMAT) == can_dlc_to_datalen_v[dlc]);
@@ -121,8 +121,8 @@ static const int canfd_dlc_to_datalen_v[CANFD_MAX_DLC + 1] =
     {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
 
 static void can_dlc_to_datalen_canfd_format_test(void** state) {
-    assert_true(can_dlc_to_datalen(-1, CANFD_FORMAT) == -EINVAL);
-    assert_true(can_dlc_to_datalen(CANFD_MAX_DLC + 1, CANFD_FORMAT) == -EINVAL);
+    assert_true(can_dlc_to_datalen(-1, CANFD_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_dlc_to_datalen(CANFD_MAX_DLC + 1, CANFD_FORMAT) == -ISOTP_EINVAL);
 
     for (int dlc = 0; dlc <= CANFD_MAX_DLC; dlc++) {
         assert_true(can_dlc_to_datalen(dlc, CANFD_FORMAT) == canfd_dlc_to_datalen_v[dlc]);
@@ -130,8 +130,8 @@ static void can_dlc_to_datalen_canfd_format_test(void** state) {
 }
 
 static void can_dlc_to_datalen_invalid_format_test(void** state) {
-    assert_true(can_dlc_to_datalen(0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(can_dlc_to_datalen(0, LAST_CAN_FORMAT) == -EINVAL);
+    assert_true(can_dlc_to_datalen(0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_dlc_to_datalen(0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
 }
 
 /**
@@ -160,8 +160,8 @@ static const int datalen_to_dlc_v[] =
     };
 
 static void can_datalen_to_dlc_can_format_test(void** state) {
-    assert_true(can_datalen_to_dlc(-1, CAN_FORMAT) == -EINVAL);
-    assert_true(can_datalen_to_dlc(CAN_MAX_DATALEN + 1, CAN_FORMAT) == -EINVAL);
+    assert_true(can_datalen_to_dlc(-1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_datalen_to_dlc(CAN_MAX_DATALEN + 1, CAN_FORMAT) == -ISOTP_EINVAL);
 
     for (int datalen = 0; datalen <= CAN_MAX_DATALEN; datalen++) {
         assert_true(can_datalen_to_dlc(datalen, CAN_FORMAT) == datalen_to_dlc_v[datalen]);
@@ -169,8 +169,8 @@ static void can_datalen_to_dlc_can_format_test(void** state) {
 }
 
 static void can_datalen_to_dlc_canfd_format_test(void** state) {
-    assert_true(can_datalen_to_dlc(-1, CANFD_FORMAT) == -EINVAL);
-    assert_true(can_datalen_to_dlc(CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -EINVAL);
+    assert_true(can_datalen_to_dlc(-1, CANFD_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_datalen_to_dlc(CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -ISOTP_EINVAL);
 
     for (int datalen = 0; datalen <= CANFD_MAX_DATALEN; datalen++) {
         assert_true(can_datalen_to_dlc(datalen, CANFD_FORMAT) == datalen_to_dlc_v[datalen]);
@@ -178,8 +178,8 @@ static void can_datalen_to_dlc_canfd_format_test(void** state) {
 }
 
 static void can_datalen_to_dlc_invalid_format_test(void** state) {
-    assert_true(can_datalen_to_dlc(0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(can_datalen_to_dlc(0, LAST_CAN_FORMAT) == -EINVAL);
+    assert_true(can_datalen_to_dlc(0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(can_datalen_to_dlc(0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
 }
 
 /**
@@ -187,14 +187,14 @@ static void can_datalen_to_dlc_invalid_format_test(void** state) {
  */
 static void pad_can_frame_invalid_format_test(void** state) {
     uint8_t buf[64] = {0};
-    assert_true(pad_can_frame(NULL, 0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, 0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(NULL, 0, LAST_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, 0, LAST_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, -1, CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, CAN_MAX_DATALEN + 1, CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, -1, CANFD_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame(buf, CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame(NULL, 0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, 0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(NULL, 0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, 0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, -1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, CAN_MAX_DATALEN + 1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, -1, CANFD_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame(buf, CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -ISOTP_EINVAL);
 }
 
 static void pad_can_frame_can_format_test(void** state) {
@@ -242,14 +242,14 @@ static void pad_can_frame_canfd_format_test(void** state) {
  */
 static void pad_can_frame_len_invalid_format_test(void** state) {
     uint8_t buf[64] = {0};
-    assert_true(pad_can_frame_len(NULL, 0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, 0, NULL_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(NULL, 0, LAST_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, 0, LAST_CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, -1, CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, CAN_MAX_DATALEN + 1, CAN_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, -1, CANFD_FORMAT) == -EINVAL);
-    assert_true(pad_can_frame_len(buf, CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -EINVAL);
+    assert_true(pad_can_frame_len(NULL, 0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, 0, NULL_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(NULL, 0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, 0, LAST_CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, -1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, CAN_MAX_DATALEN + 1, CAN_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, -1, CANFD_FORMAT) == -ISOTP_EINVAL);
+    assert_true(pad_can_frame_len(buf, CANFD_MAX_DATALEN + 1, CANFD_FORMAT) == -ISOTP_EINVAL);
 }
 
 static void pad_can_frame_len_can_format_test(void** state) {

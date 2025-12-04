@@ -23,7 +23,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -138,11 +137,11 @@ static void test_n_as_timeout_on_ff_send(void** state) {
     test_ctx.simulate_delay = true;
     test_ctx.delay_usec = 150000; // 150ms > 100ms timeout
     will_return(mock_can_rx_delayed, NULL);
-    will_return(mock_can_rx_delayed, -ETIMEDOUT);
+    will_return(mock_can_rx_delayed, -ISOTP_ETIMEDOUT);
 
     // Should timeout waiting for FC
     rc = isotp_send(ctx, send_buf, sizeof(send_buf), 1000000);
-    assert_int_equal(rc, -ETIMEDOUT);
+    assert_int_equal(rc, -ISOTP_ETIMEDOUT);
 
     free(ctx);
 }
@@ -192,11 +191,11 @@ static void test_n_bs_timeout_on_fc_wait(void** state) {
     test_ctx.simulate_delay = true;
     test_ctx.delay_usec = 150000; // 150ms > 100ms timeout
     will_return(mock_can_rx_delayed, NULL);
-    will_return(mock_can_rx_delayed, -ETIMEDOUT);
+    will_return(mock_can_rx_delayed, -ISOTP_ETIMEDOUT);
 
     // Should timeout between FC.WAIT frames
     rc = isotp_send(ctx, send_buf, sizeof(send_buf), 1000000);
-    assert_int_equal(rc, -ETIMEDOUT);
+    assert_int_equal(rc, -ISOTP_ETIMEDOUT);
 
     free(ctx);
 }
@@ -244,11 +243,11 @@ static void test_n_cr_timeout_on_cf_wait(void** state) {
     test_ctx.simulate_delay = true;
     test_ctx.delay_usec = 150000; // 150ms > 100ms timeout
     will_return(mock_can_rx_delayed, NULL);
-    will_return(mock_can_rx_delayed, -ETIMEDOUT);
+    will_return(mock_can_rx_delayed, -ISOTP_ETIMEDOUT);
 
     // Should timeout waiting for CF
     rc = isotp_recv(ctx, recv_buf, sizeof(recv_buf), 0, 0, 1000000);
-    assert_int_equal(rc, -ETIMEDOUT);
+    assert_int_equal(rc, -ISOTP_ETIMEDOUT);
 
     free(ctx);
 }
@@ -481,11 +480,11 @@ static void test_n_as_to_n_bs_transition(void** state) {
     // Mock second FC.WAIT (now uses N_Bs timeout - 100ms)
     test_ctx.delay_usec = 120000; // 120ms > 100ms (should timeout)
     will_return(mock_can_rx_delayed, NULL);
-    will_return(mock_can_rx_delayed, -ETIMEDOUT);
+    will_return(mock_can_rx_delayed, -ISOTP_ETIMEDOUT);
 
     // Should timeout on second FC.WAIT
     rc = isotp_send(ctx, send_buf, sizeof(send_buf), 1000000);
-    assert_int_equal(rc, -ETIMEDOUT);
+    assert_int_equal(rc, -ISOTP_ETIMEDOUT);
 
     free(ctx);
 }
