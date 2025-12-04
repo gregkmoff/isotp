@@ -47,91 +47,91 @@ extern "C" {
  *
  * Returned when an operation completes successfully.
  */
-static const int ISOTP_EOK = 0;
+#define ISOTP_EOK (0)
 
 /**
  * @brief Out of memory
  *
  * Returned when memory allocation fails.
  */
-static const int ISOTP_ENOMEM = 12;
+#define ISOTP_ENOMEM (12)
 
 /**
  * @brief Bad address or fault
  *
  * Returned when an internal fault is detected or addressing is invalid.
  */
-static const int ISOTP_EFAULT = 14;
+#define ISOTP_EFAULT (14)
 
 /**
  * @brief Invalid argument error
  *
  * Returned when a function parameter is invalid or out of range.
  */
-static const int ISOTP_EINVAL = 22;
+#define ISOTP_EINVAL (22)
 
 /**
  * @brief Result too large (range error)
  *
  * Returned when a value is outside the valid range.
  */
-static const int ISOTP_ERANGE = 34;
+#define ISOTP_ERANGE (34)
 
 /**
  * @brief Value too large for defined data type (overflow)
  *
  * Returned when a buffer overflow would occur or data is too large.
  */
-static const int ISOTP_EOVERFLOW = 75;
+#define ISOTP_EOVERFLOW (75)
 
 /**
  * @brief Timer expired
  *
  * Returned when a timer has expired (used in testing).
  */
-static const int ISOTP_ETIME = 84;
+#define ISOTP_ETIME (84)
 
 /**
  * @brief Message size error
  *
  * Returned when a message or frame size is incorrect or too small.
  */
-static const int ISOTP_EMSGSIZE = 90;
+#define ISOTP_EMSGSIZE (90)
 
 /**
  * @brief No message of desired type
  *
  * Returned when the received frame is not of the expected type.
  */
-static const int ISOTP_ENOMSG = 91;
+#define ISOTP_ENOMSG (91)
 
 /**
  * @brief Bad message
  *
  * Returned when a message contains invalid data or format.
  */
-static const int ISOTP_EBADMSG = 92;
+#define ISOTP_EBADMSG (92)
 
 /**
  * @brief No buffer space available
  *
  * Returned when there is insufficient buffer space to complete an operation.
  */
-static const int ISOTP_ENOBUFS = 105;
+#define ISOTP_ENOBUFS (105)
 
 /**
  * @brief Operation timed out
  *
  * Returned when a protocol timeout occurs (N_As, N_Bs, or N_Cr expired).
  */
-static const int ISOTP_ETIMEDOUT = 110;
+#define ISOTP_ETIMEDOUT (110)
 
 /**
  * @brief Operation not supported
  *
  * Returned when an operation or feature is not supported.
  */
-static const int ISOTP_ENOTSUP = 134;
+#define ISOTP_ENOTSUP (134)
 
 /**
  * @brief Connection aborted
@@ -139,7 +139,7 @@ static const int ISOTP_ENOTSUP = 134;
  * Returned when a connection is aborted (e.g., FC.WAIT limit exceeded,
  * FC.OVFLW received, or sequence number mismatch).
  */
-static const int ISOTP_ECONNABORTED = 130;
+#define ISOTP_ECONNABORTED (130)
 
 /** @} */ /* End of ErrorCodes group */
 
