@@ -132,11 +132,11 @@ static void parse_cf_invalid_sn(void** state) {
         ctx->total_datalen = sizeof(buf);
         ctx->remaining_datalen = sizeof(buf);
         ctx->can_frame[0] = CF_PCI | (uint8_t)(i & 0x0000000fU);
-        ctx->sequence_num = (i + 1) & (0x0000000fU);
+        ctx->sequence_num = (uint8_t)((i + 1) & 0x0fU);
 
         will_return(address_extension_len, 0);
         assert_true(parse_cf(ctx, buf, sizeof(buf)) == -ISOTP_ECONNABORTED);
-        assert_true(ctx->sequence_num = INT_MAX);
+        assert_true(ctx->sequence_num == UINT8_MAX);
         assert_true(ctx->remaining_datalen = INT_MAX);
     }
 

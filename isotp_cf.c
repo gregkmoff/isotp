@@ -65,20 +65,20 @@ int parse_cf(isotp_ctx_t ctx,
     }
 
     // validate the sequence number; it should be the next one
-    int sn = ctx->can_frame[ae_l] & 0x0fU;
+    uint8_t sn = ctx->can_frame[ae_l] & 0x0fU;
     if (sn != ctx->sequence_num) {
         // we're out of sequence; abort the transmission
 
         // set the expected sequence number to something invalid
         // to force all subsequent CFs to fail until we start again
-        ctx->sequence_num = INT_MAX;
+        ctx->sequence_num = UINT8_MAX;
         ctx->remaining_datalen = INT_MAX;
 
         return -ISOTP_ECONNABORTED;
     } else {
         // advance the expected sequence number
         ctx->sequence_num++;
-        ctx->sequence_num &= 0x0000000fU;
+        ctx->sequence_num &= 0x0fU;
     }
 
     // capture the address extension
@@ -94,7 +94,7 @@ int parse_cf(isotp_ctx_t ctx,
     if (copy_len < 0) {
         return -ISOTP_EFAULT;
     }
-    memcpy(dp, sp, copy_len);
+    (void)memcpy(dp, sp, copy_len);
 
     ctx->remaining_datalen -= copy_len;
 
@@ -123,7 +123,7 @@ int prepare_cf(isotp_ctx_t ctx,
         return ae_l;
     }
 
-    memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
+    (void)memset(ctx->can_frame, 0, sizeof(ctx->can_frame));
     ctx->can_frame_len = 0;
 
     // add the address extension, if any
@@ -143,17 +143,17 @@ int prepare_cf(isotp_ctx_t ctx,
     uint8_t* dp = &(ctx->can_frame[ae_l]);
 
     // setup the PCI with the SN
-    (*dp++) = CF_PCI | (uint8_t)(ctx->sequence_num & 0x0000000fU);
+    (*dp++) = CF_PCI | (ctx->sequence_num & 0x0fU);
     ctx->can_frame_len++;
 
     // advance the SN
     ctx->sequence_num++;
-    ctx->sequence_num &= 0x0000000fU;
+    ctx->sequence_num &= 0x0fU;
 
     // copy the data
     int copy_len = min_int(can_max_datalen(ctx->can_format) - ctx->can_frame_len,
                            ctx->remaining_datalen);
-    memcpy(dp, sp, copy_len);
+    (void)memcpy(dp, sp, copy_len);
     ctx->can_frame_len += copy_len;
 
     int pad_rc = pad_can_frame_len(ctx->can_frame,

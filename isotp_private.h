@@ -80,7 +80,7 @@ struct isotp_ctx_s {
 
     int total_datalen;
     int remaining_datalen;
-    int sequence_num;
+    uint8_t sequence_num;
 
     uint8_t fs_blocksize;  // blocksize from the last FC
     uint64_t fs_stmin;     // CF gap, STmin in usec
