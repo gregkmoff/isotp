@@ -1,0 +1,4 @@
+To run the tests in this directory you need to have cmocka installed.  For example:
+
+gcc -lcmocka -I<$CMOCKA_ROOT>/include/cmockery -I<$CMOCKA_ROOT>/include \
+    -L<$CMOCKA_ROOT>/lib ../isotp_sf.c isotp_sf_ut.c
